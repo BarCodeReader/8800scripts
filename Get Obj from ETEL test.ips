@@ -1,0 +1,10 @@
+SCALAR value
+//----------------------------------------------------------------------------------------------------------------------
+PROC main
+mcall "ETLgetObj", "axisX1Left", &value
+log "value = ", value
+
+mcall "ETLdebugTraceStart", "/sd0/datacon/data/Mike/test.ini"
+
+mcall "ETLdebugTraceStopAll"
+ENDPROC

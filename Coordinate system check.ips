@@ -1,0 +1,48 @@
+
+//----------------------------------------------------------------------------------------------------------------------
+ACTOR WTX = LINETEL (personality = "axisWaferX")
+ACTOR WTY = LINETEL (personality = "axisWaferY")
+ACTOR XYL = AXSYSTEM (personality = "MaximXYLeft", trafo = "trafoA0G0XYLeft")
+ACTOR XYR = AXSYSTEM (personality = "MaximXYRight", trafo = "trafoA0G0XYRight")
+
+LENGTH wtx, wty, wtx0, wty0
+LENGTH2D xyl, xyl0, xyr, xyr0
+
+PROC main
+wtx = 0mm
+wty = 0mm
+xyl.x = 0mm
+xyl.y = 0mm
+xyr.x = 0mm
+xyr.y = 0mm
+//get home position
+WTX.getPos wtx0
+WTY.getPos wty0
+XYL.getPos xyl0
+XYR.getPos xyr0
+log "================================="
+log "WT x now in: ", wtx0
+log "WT y now in: ", wty0
+log "PPXYLeft now in: ", xyl0
+log "PPXYRight now in: ", xyr0
+log "================================="
+//get 0 position
+SEQ
+WTX.goPos wtx (feedrate = 50%)
+WTY.goPos wty (feedrate = 50%)
+XYL.goPos xyl (feedrate = 50%)
+XYR.goPos xyr (feedrate = 50%)
+ENDSEQ
+WTX.getPos wtx0
+WTY.getPos wty0
+XYL.getPos xyl0
+XYR.getPos xyr0
+log "================================="
+log "WT x now in: ", wtx0
+log "WT y now in: ", wty0
+log "PPXYLeft now in: ", xyl0
+log "PPXYRight now in: ", xyr0
+log "================================="
+
+
+ENDPROC

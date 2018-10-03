@@ -1,0 +1,236 @@
+//======================Motion Analyse Tool======================
+//Created by: Mike Yun, Christina Li
+//Created on: 30-Apr-2018
+//Version log: 30-Apr-2018 V.1.0
+/*Function Description:
+	1> OMA tracing: This will allow user to trace any axis they want, program will load the .ini file to record data for analysis.
+	2> Humming Noise: 
+*/
+//===============================================================
+//*************************************************************************************************
+//*******			OMA Tracing     														*******
+//*******			Change log:																*******
+//*******			Version 1.0     Mike     25-Mar-2018    first version					*******
+//*************************************************************************************************
+//******* 			ini file address : /sd0/datacon/data/OMA_Tracing/single_axis_tracing.ini
+//*************************************************************************************************
+//*******			This IPS can only be used for Covine system with AccurET controllers!!!
+//*************************************************************************************************
+//===============================================================
+//FUNC PARAMETER SETTINGS
+SCALAR option,value,loop,OTPloop, return, funcopt, flag,decision
+//TIME POINT
+TIME OTP_tracing_delay
+//END
+
+//FUNC AXIS DEFINITION
+ACTOR XYLeft = AXSYSTEM (personality="MaximXYLeft",trafo="trafoA0G0XYLeft")
+ACTOR XYRight = AXSYSTEM (personality="MaximXYRight",trafo="trafoA0G0XYRight")
+
+ACTOR ZLeft = LINETEL (personality="axisZLeft", trafo="trafoZ0G0Left")
+ACTOR ZRight = LINETEL (personality="axisZRight", trafo="trafoZ0G0Right")
+
+ACTOR YLeft =  LINETEL (personality="axisYLeft")
+ACTOR YRight =  LINETEL (personality="axisYRight")
+
+ACTOR X1Left = LINETEL (personality="axisX1Left")
+ACTOR X2Left = LINETEL (personality="axisX2Left")
+ACTOR X1Right = LINETEL (personality="axisX1Right")
+ACTOR X2Right = LINETEL (personality="axisX2Right")
+
+ACTOR FLZLeft = LINETEL (personality = "axisFlipZLeft", speed = 1000mm/s, accel = 35000mm/s2, jerktime = 15ms)
+ACTOR FLZRight = LINETEL (personality = "axisFlipZRight", speed = 1000mm/s, accel = 35000mm/s2, jerktime = 15ms)
+
+ACTOR WTX =  LINETEL (personality = "axisWaferX")
+ACTOR WTY =  LINETEL (personality = "axisWaferY")
+//END
+
+//FUNC INITIALIZATION (INI)
+PROC ini
+	flag = 1
+	loop = 1
+	OTPloop = 1 //the name stands for: Oma-Tracing Personalized
+	OTP_tracing_delay = 6s
+	//record home position
+	XYLeft.getPos XYL0
+	XYRight.getPos XYR0
+	ZLeft.getPos ZL0
+	ZRight.getPos ZR0
+	FLZLeft.getPos FLZL0
+	FLZRight.getPos FLZR0
+	WTX.getPos WTX0
+	WTY.getPos WTY0
+ENDPROC
+//END
+//FUNC HOME POSITION
+PROC home_pos
+	PAR
+	ZLeft.goPos ZL0 (feedrate = 10%)
+	ZRight.goPos ZR0 (feedrate = 10%)
+	ENDPAR
+	delay 1s
+	PAR
+	XYLeft.goPos XYL0 (feedrate = 10%)
+	XYRight.goPos XYR0 (feedrate = 10%)
+	ENDPAR
+	delay 1s
+	PAR
+	FLZLeft.goPos FLZL0 (feedrate = 10%)
+	FLZRight.goPos FLZR0 (feedrate = 10%)
+	ENDPAR
+	delay 1s
+	PAR
+	WTX.goPos WTX0 (feedrate = 10%)
+	WTY.goPos WTY0 (feedrate = 10%)
+	ENDPAR
+ENDPROC
+//END
+//FUNC MCALL OPTIONS (MCALL_OPT)
+PROC mcall_opt
+	//choose axis, assign value to $option.
+	messagebox "Axis Option":"X1 Axis" "1. X1-LEFT   2. X1-RIGHT", "X2 Axis" "3. X2-LEFT   4.X2-RIGHT", "Y Axis" "5. Y-LEFT   6.Y-RIGHT", "Z Axis" "7.Z-LEFT   8.Z-RIGHT","Theta Axis" "9. Theta-LEFT   10.Theta-RIGHT", "Flipper Z" "11. Flipper-LEFT   12.Flipper-RIGHT","Flipper Theta" "13. Flipper-LEFT   14. Flipper-RIGHT", "Wafer Table" "15. Wafer X   16. Wafer Y", "Needle Axis" "17. Needle Z", input "Axis Option" option
+
+	//ETEL gets the object based on the function & axis option
+	IF option == 1 THEN mcall "ETLgetObj", "axisX1Left", &value ENDIF //X1
+	IF option == 2 THEN mcall "ETLgetObj", "axisX1Right", &value ENDIF
+	IF option == 3 THEN mcall "ETLgetObj", "axisX2Left", &value ENDIF //X2
+	IF option == 4 THEN mcall "ETLgetObj", "axisX2Right", &value ENDIF
+	IF option == 5 THEN mcall "ETLgetObj", "axisYLeft", &value ENDIF //Y
+	IF option == 6 THEN mcall "ETLgetObj", "axisYRight", &value ENDIF
+	IF option == 7 THEN mcall "ETLgetObj", "axisZLeft", &value ENDIF //Z
+	IF option == 8 THEN mcall "ETLgetObj", "axisZRight", &value ENDIF
+	IF option == 9 THEN mcall "ETLgetObj", "axisThetaLeft", &value ENDIF //Theta
+	IF option == 10 THEN mcall "ETLgetObj", "axisThetaRight", &value ENDIF
+	IF option == 11 THEN mcall "ETLgetObj", "axisFlipZLeft", &value ENDIF //Flipper Z
+	IF option == 12 THEN mcall "ETLgetObj", "axisFlipZRight", &value ENDIF
+	IF option == 13 THEN mcall "ETLgetObj", "axisFlipThetaLeft", &value ENDIF //Flipper Theta
+	IF option == 14 THEN mcall "ETLgetObj", "axisFlipThetaRight", &value ENDIF
+	IF option == 15 THEN mcall "ETLgetObj", "axisWaferX", &value ENDIF //WT
+	IF option == 16 THEN mcall "ETLgetObj", "axisWaferY", &value ENDIF
+	IF option == 17 THEN mcall "ETLgetObj", "axisNeedle", &value ENDIF //Needle
+ENDPROC
+//END
+//FUNC OMA TRACING PERSONALIZED (OTP)
+PROC OTP
+WHILE OTPloop == 1 DO 
+
+			input "Use manipulator to move the axis, tracing will start immediately after click OK and last for 6 seconds"
+
+			mcall "ETLdebugTraceStart", "/sd0/datacon/data/single_axis_tracing.ini" 
+			log "ini file loaded"
+			log "============================="
+			log "***                OMA Tracing Enabled               ***"
+			log "============================="
+			delay OTP_tracing_delay
+			input "Tracing Finished"
+			
+			IF input "Do for other axis?" THEN //if the answer is 'ok', then repeat the while loop
+				mcall "ETLdebugTraceStopAll"
+				OTPloop = 1 
+			ELSE OTPloop = 0
+				mcall "ETLdebugTraceStopAll"
+				log "============================="
+				log "***               OMA Tracing Disabled               ***"
+				log "============================="	
+			ENDIF
+//		ENDIF
+ENDWHILE		
+ENDPROC
+//END
+
+//FUNC MAIN-omatracing
+PROC OMAtracing
+call ini 
+WHILE loop == 1 DO
+	call mcall_opt //axis option is made
+	call OTP 		//
+	IF input "Repeat process for other axis?" THEN 
+		loop = 1 
+		//machine home
+		call home_pos
+	ELSE loop = 0
+		//machine home
+		call home_pos
+		log "============================="
+		log "***               Program Ends               ***"
+		log "============================="
+	ENDIF
+ENDWHILE
+ENDPROC
+//END
+//===============================================================
+//*************************************************************************************************
+//*******			Humming Noise   														*******
+//*******			Change log:																*******
+//*******			Version 1.0     Mike     25-Mar-2018    first version					*******
+//*************************************************************************************************
+//******* 			ini file address : 
+//******* 			/sd0/datacon/data/ips/FFT8k8-Data/FFT-WaferTableandGantryY.ini
+//******* 			/sd0/datacon/data/ips/FFT8k8-Data/FFT-GantryX.ini
+
+//******* 			.m file address :
+//******* 			/sd0/datacon/data/ips/FFT8k8-Data/FFT8k8WTandGantryY.m
+//******* 			/sd0/datacon/data/ips/FFT8k8-Data/FFT8k8GantryX.m
+//*************************************************************************************************
+//*******			This IPS can only be used for Covine system with AccurET controllers!!!
+//*************************************************************************************************
+//===============================================================
+
+PROC HMN //humming noise
+call ini
+input "Step 1: Please take a video of humming noise immediately. Then copy the file FFT8k8.ips and folder FFT8k8-Data from folder :\n\nips-HummingNoiseFFT-8k8\n\n to machine: \n\n/home/ses/sd0/datacon/data/ips."
+input "Step 2: Use manipulator or step mode to move the axis, to the position where you can reproduce humming noise. \nStop the axis there and click OK, later data will be collected automatically."
+log "======Axes are ready======"
+input "Step 3: Auto humming noise analysis for Gantry X axes"
+log "======Enabling OMA Tracing======"
+mcall "ETLgetObj", "axisX1Left", &value
+delay 1s
+log "======Calling OMA ini File for Gantry X======"
+mcall "ETLdebugTraceStart", "/sd0/datacon/data/ips/FFT8k8-Data/FFT-GantryX.ini" 
+input "Please click Okay and then wait for 10s"
+delay 10s
+
+log "======Data Capture Finished======"
+log "======Analysing======"
+delay 1s
+log "======Trying to Plot Graph======"
+delay 1s
+mcall "startOctaveScript","/sd0/datacon/data/ips/FFT8k8-Data/FFT8k8GantryX.m" 
+
+input "Step 4: Auto humming noise analysis for Wafer Table and Gantry Y axes"
+
+log "======Enabling OMA Tracing======"
+mcall "ETLgetObj", "axisWaferX" 
+delay 1s
+log "======Calling ini File for Wafer Table and Gantry Y======"
+mcall "ETLdebugTraceStart", "/sd0/datacon/data/ips/FFT8k8-Data/FFT-WaferTableandGantryY.ini"
+input "Please click Okay and then wait for 10s"
+delay 10s
+log "======Data Capture Finished======"
+log "======Analysing======"
+delay 1s
+log "======Trying to Plot Graph======"
+delay 1s
+
+mcall "startOctaveScript","/sd0/datacon/data/ips/FFT8k8-Data/FFT8k8WTandGantryY.m" 
+input "Step 5: Please send us the whole folder:\n FFT8k8-Data\nunder\n/home/ses/sd0/datacon/data/ips."
+
+ENDPROC
+
+PROC main
+call ini
+WHILE flag == 1 DO
+input "OPTIONS":"Please indicate the function you want to use\n1.OMA-Tracing\n3.Humming Noise":funcopt
+decision = funcopt-1 //the correct value should be either 0 or 1, based on the option given
+IF funcopt == 1 THEN //user keys in the correct number
+call OMAtracing
+flag = 0
+ELSEIF funcopt == 2 THEN
+call HMN
+flag = 0
+ELSE
+flag = 1 //wrong value keyed in, retry the potion.
+ENDIF
+ENDWHILE
+
+ENDPROC

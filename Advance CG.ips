@@ -1,0 +1,321 @@
+//===================================================================
+//===============================AXIS================================
+//===================================================================
+//FUNC AXIS
+ACTOR XYLeft = AXSYSTEM (personality="MaximXYLeft",trafo="trafoA0G0XYLeft")
+ACTOR XYRight = AXSYSTEM (personality="MaximXYRight",trafo="trafoA0G0XYRight")
+ACTOR ZLeft = LINETEL(personality="axisZLeft", trafo="trafoZ0G0Left")
+ACTOR ZRight = LINETEL(personality="axisZRight", trafo="trafoZ0G0Right")
+
+ACTOR ppx1_li = LINETEL(personality="axisX1Left")
+ACTOR ppx2_li = LINETEL(personality="axisX2Left")
+ACTOR ppy_li =  LINETEL(personality="axisYLeft")
+
+ACTOR ppx1_re = LINETEL(personality="axisX1Right")
+ACTOR ppx2_re = LINETEL(personality="axisX2Right")
+ACTOR ppy_re =  LINETEL(personality="axisYRight")
+
+//Inputs & Outputs
+ACTOR diSlideFluxerFrontLeft = DIGIN(personality="DigInSlideFluxerFrontLeft")
+ACTOR diSlideFluxerHomeLeft = DIGIN(personality="DigInSlideFluxerHomeLeft")
+ACTOR diSlideFluxerFrontRight = DIGIN(personality="DigInSlideFluxerFrontRight")
+ACTOR diSlideFluxerHomeRight = DIGIN(personality="DigInSlideFluxerHomeRight")
+
+ACTOR RgbLightScDirectLeft = RGBLIGHT(personality="RgbLightScDirectLeft")
+ACTOR RgbLightScRingLeft = RGBLIGHT(personality="RgbLightScRingLeft")
+ACTOR RgbLightScDirectRight = RGBLIGHT(personality="RgbLightScDirectRight")
+ACTOR RgbLightScRingRight = RGBLIGHT(personality="RgbLightScRingRight")
+
+//Cameras
+ACTOR ScLeft = CAMERA(name="ScLeft")
+ACTOR ScRight = CAMERA(name="ScRight")
+//END
+
+//FUNC PARAMETER
+SCALAR cycle, loop, option, machinetype,cameraoption,convfactor
+//===================================================================
+//=============================CONSTANTS=============================
+//===================================================================
+//SF ADV
+LENGTH ADVWIDTH1,ADVWIDTH2, ADVTOTANK, ADVTOTOP,ADVTOTANKZ,ADVTOTOPZ
+//===================================================================
+//============================PARAMETERS=============================
+//===================================================================
+//ONLY FOR CGSF
+LENGTH2D XYL2D, XYR2D
+LENGTH CAMPOS_LZ, CAMPOS_RZ, XLPOS, YLPOS, XRPOS,YRPOS
+//ADV
+LENGTH ADVSF_L_XTANK,ADVSF_L_XTOP, ADVSF_L_X2, ADVSF_L_Y1, ADVSF_L_Y2, ADVSF_L_ZTANK,ADVSF_L_ZTOP, ADVSF_L_Z2, ADVSF_R_XTANK,ADVSF_R_XTOP, ADVSF_R_X2, ADVSF_R_Y1,ADVSF_R_Y2, ADVSF_R_ZTANK,ADVSF_R_ZTOP, ADVSF_R_Z2
+//END
+//===================================================================
+//======================CONSTANT LOOK UP TABLE=======================
+//===================================================================
+//FUNC INI
+PROC ini
+//global
+	convfactor = 1000000
+	loop=1
+	cycle = 1
+	tolerance_length = 0.1mm
+	tolerance_angle = 0.1
+//CGSF
+	BUFFERSF = 5000000nm
+	//ADV
+	ADVWIDTH1 = 13500000nm
+	ADVWIDTH2 = 65560000nm
+	ADVTOTANK = 79500000nm
+	ADVTOTANKZ = 18000000nm
+	ADVTOTOP = 106090000nm
+	ADVTOTOPZ = 26500000nm
+ENDPROC
+//END
+//===================================================================
+//===========================SLIDE FLUXER============================
+//===================================================================
+//FUNC Home slidefluxer
+
+PROC SEND_SF_LEFT_HOME
+	mcall "setDippingPlateLeftRelease"
+	mcall "crystalHomeOma", "left"
+ENDPROC
+
+PROC SEND_SF_RIGHT_HOME
+	mcall "setDippingPlateRightRelease"
+	mcall "crystalHomeOma", "right"
+ENDPROC
+//END
+//FUNC Move SF forwards
+PROC MOVE_SF_LEFT_FORWARD
+	mcall "setDippingPlateLeftRelease"
+	mcall "setDippingPlateLeftCover" //Move Crystal cavity plate to dipping position and lock
+ENDPROC
+
+PROC MOVE_SF_RIGHT_FORWARD
+	mcall "setDippingPlateRightRelease"
+	mcall "setDippingPlateRightCover" //Move Crystal cavity plate to dipping position and lock
+ENDPROC
+//END
+//FUNC Move SF backwards
+
+PROC MOVE_SF_LEFT_BACKWARD
+	mcall "setDippingPlateLeftRelease"
+	mcall "setDippingPlateLeftFree" //Move Crystal cavity plate to hiding position and lock
+ENDPROC
+
+PROC MOVE_SF_RIGHT_BACKWARD
+	mcall "setDippingPlateRightRelease"
+	mcall "setDippingPlateRightFree" //Move Crystal cavity plate to hiding position and lock
+ENDPROC
+//END
+
+//Determination of Slidefluxer hardstops
+//FUNC LEFT SF HARDSTOP
+PROC SCAN_LEFT
+	dummy = 1
+	WHILE dummy == 1 DO
+		dummy = 0
+		messagebox "Crystal SF Left" : "Crystal SF Left:" "Please enter the values below in the parameters before the SF stroke determination is started.\n--> Machine - Pick & Place systems - Slide fluxer (SF).\n\nSave your changes and continue with OK.", "Machine SF Stroke start position left: [deg]" "0.0","Machine crystal SF stroke left: [deg]" "180.0" (position=top)
+		call INIT_PARAMETER
+		IF Stroke_Start_Left != 0?THEN
+			dummy = 1
+		ENDIF
+		IF Stroke_Length_Left != 180?THEN
+			dummy = 1
+		ENDIF
+	ENDWHILE
+	call SEND_SF_LEFT_HOME
+	SF_ROT_L = 170?	axSFL.goPos SF_ROT_L
+	WHILE diSlideFluxerFrontLeft.isOn DO
+		SF_ROT_L = SF_ROT_L + 0.1?		axSFL.goPos SF_ROT_L
+	ENDWHILE
+	axSFL.getPos aFrontLeft1
+	
+	SF_ROT_L = 220?	axSFL.goPos SF_ROT_L
+	WHILE diSlideFluxerFrontLeft.isOn DO
+		SF_ROT_L = SF_ROT_L - 0.1?		axSFL.goPos SF_ROT_L
+	ENDWHILE
+	axSFL.getPos aFrontLeft2
+	aFrontLeft = (aFrontLeft1+aFrontLeft2) / 2
+
+	SF_ROT_L = 50?	axSFL.goPos SF_ROT_L
+	WHILE diSlideFluxerHomeLeft.isOn DO
+		SF_ROT_L = SF_ROT_L - 0.1?		axSFL.goPos SF_ROT_L
+	ENDWHILE
+	axSFL.getPos aHomeLeft2
+
+	SF_ROT_L = -10?	axSFL.goPos SF_ROT_L
+	WHILE diSlideFluxerHomeLeft.isOn DO
+		SF_ROT_L = SF_ROT_L + 0.1?		axSFL.goPos SF_ROT_L
+	ENDWHILE
+	axSFL.getPos aHomeLeft1
+	aHomeLeft = (aHomeLeft1+aHomeLeft2) / 2
+	
+	axSFL.goPos aFrontLeft
+	dummy = 1
+	WHILE dummy == 1 DO
+		dummy = 0
+		messagebox "Crystal SF Left" : "Crystal SF Left:" "Please enter the new values in the parameters.\n--> Machine - Pick & Place systems - Slide fluxer (SF).\n\nSave your changes and continue with OK.", "Machine SF Stroke start position left: [deg]" (aHomeLeft/convfactor)%1,"Machine crystal SF stroke left: [deg]" (aFrontLeft/convfactor)%1 (position=top)
+		call INIT_PARAMETER
+		IF abs(aHomeLeft - Stroke_Start_Left) > tolerance_angle THEN
+			dummy = 1
+		ENDIF
+		IF abs(aFrontLeft - Stroke_Length_Left) > tolerance_angle THEN
+			dummy = 1
+		ENDIF
+	ENDWHILE
+	call SEND_SF_LEFT_HOME
+	call MOVE_SF_LEFT_FORWARD
+ENDPROC
+//END
+//FUNC RIGHT SF HARDSTOP
+PROC SCAN_RIGHT
+	dummy = 1
+	WHILE dummy == 1 DO
+		dummy = 0
+		messagebox "Crystal SF Right" : "Crystal SF Right:" "Please enter the values below in the parameters before the SF stroke determination is started.\n--> Machine - Pick & Place systems - Slide fluxer (SF).\n\nSave your changes and continue with OK.", "Machine SF Stroke start position right: [deg]" "0.0","Machine crystal SF stroke right: [deg]" "180.0" (position=top)
+		call INIT_PARAMETER
+		IF Stroke_Start_Right != 0?THEN
+			dummy = 1
+		ENDIF
+		IF Stroke_Length_Right != 180?THEN
+			dummy = 1
+		ENDIF
+	ENDWHILE
+	call SEND_SF_RIGHT_HOME
+	SF_ROT_R = 170?	axSFR.goPos SF_ROT_R
+	WHILE diSlideFluxerFrontRight.isOn DO
+		SF_ROT_R = SF_ROT_R + 0.1?		axSFR.goPos SF_ROT_R
+	ENDWHILE
+	axSFR.getPos aFrontRight1
+
+	SF_ROT_R = 220?	axSFR.goPos SF_ROT_R
+	WHILE diSlideFluxerFrontRight.isOn DO
+		SF_ROT_R = SF_ROT_R - 0.1?		axSFR.goPos SF_ROT_R
+	ENDWHILE
+	axSFR.getPos aFrontRight2
+	aFrontRight = (aFrontRight1+aFrontRight2) / 2
+
+	SF_ROT_R = 50?	axSFR.goPos SF_ROT_R
+	WHILE diSlideFluxerHomeRight.isOn DO
+		SF_ROT_R = SF_ROT_R - 0.1?		axSFR.goPos SF_ROT_R
+	ENDWHILE
+	axSFR.getPos aHomeRight2
+	log aHomeRight2/1000000
+
+	SF_ROT_R = -10?	axSFR.goPos SF_ROT_R
+	WHILE diSlideFluxerHomeRight.isOn DO
+		SF_ROT_R = SF_ROT_R + 0.1?		axSFR.goPos SF_ROT_R
+	ENDWHILE
+	axSFR.getPos aHomeRight1
+	aHomeRight = (aHomeRight1+aHomeRight2) / 2
+	
+	axSFR.goPos aFrontRight
+	dummy = 1
+	WHILE dummy == 1 DO
+		dummy = 0
+		messagebox "Crystal SF Right" : "Crystal SF Right:" "Please enter the new values in the parameters.\n--> Machine - Pick & Place systems - Slide fluxer (SF).\n\nSave your changes and continue with OK.", "Machine SF Stroke start position right: [deg]" (aHomeRight/convfactor)%1,"Machine crystal SF stroke right: [deg]" (aFrontRight/convfactor)%1 (position=top)
+		call INIT_PARAMETER
+		IF abs(aHomeRight - Stroke_Start_Right) > tolerance_angle THEN
+			dummy = 1
+		ENDIF
+		IF abs(aFrontRight - Stroke_Length_Right) > tolerance_angle THEN
+			dummy = 1
+		ENDIF
+	ENDWHILE
+	call SEND_SF_RIGHT_HOME
+	call MOVE_SF_RIGHT_FORWARD
+	ENDPROC
+//END
+
+//FUNC SEARCH_SC_LEFT
+PROC SEARCH_SC_LEFT
+		input "Step 1/2 Left SF Y position determination. \nOpen manipulator, use left Substrate Camera to move to upper right corner, upper edge of SF dipping plate"
+		    ZLeft.getPos CAMPOS_LZ
+		    XYLeft.getPos XYL2D
+		    YLPOS = XYL2D.y
+		input "Step 2/2 Left X position determination. \nMove left Substrate Camera to upper right corner, right edge of SF dipping plate"
+			XYLeft.getPos XYL2D
+			XLPOS = XYL2D.x 
+ENDPROC
+//END
+//FUNC SEARCH_SC_RIGHT
+PROC SEARCH_SC_RIGHT
+		input "Step 1/2 Right SF Y position determination. \nOpen manipulator, use left Substrate Camera to move to upper left corner, upper edge of SF dipping plate"
+		    ZLeft.getPos CAMPOS_RZ
+		    XYLeft.getPos XYR2D
+		    YRPOS = XYR2D.y
+		input "Step 2/2 Right SF X position determination. \nMove left Substrate Camera to move to upper left corner, left edge of SF dipping plate"
+			XYLeft.getPos XYR2D
+			XRPOS = XYR2D.x 
+ENDPROC
+//END
+//===================================================================
+//==============================ADVANCE==============================
+//===================================================================
+//FUNC CAL_LEFT ADV
+PROC ADVCAL_LEFT
+
+ADVSF_L_XTANK = XLPOS- ADVTOTANK
+ADVSF_L_XTOP = XLPOS- ADVTOTOP
+ADVSF_L_X2 = -1000mm
+ADVSF_L_Y1 = YLPOS + ADVWIDTH1
+ADVSF_L_Y2 = YLPOS - ADVWIDTH2
+ADVSF_L_ZTANK = CAMPOS_LZ + ADVTOTANKZ + BUFFERSF
+ADVSF_L_ZTOP = CAMPOS_LZ + ADVTOTOPZ
+ADVSF_L_Z2 = -1000mm
+//convert
+ADVSF_L_XTANK = ADVSF_L_XTANK/convfactor
+ADVSF_L_XTOP = ADVSF_L_XTOP/convfactor
+
+ADVSF_L_Y1 = ADVSF_L_Y1/convfactor 
+ADVSF_L_Y2 = ADVSF_L_Y2/convfactor 
+ADVSF_L_ZTANK = ADVSF_L_ZTANK/convfactor
+ADVSF_L_ZTOP = ADVSF_L_ZTOP/convfactor
+
+ENDPROC
+//END
+//FUNC CAL_RIGHT ADV
+PROC ADVCAL_RIGHT
+ADVSF_R_XTANK = XLPOS + ADVTOTANK
+ADVSF_R_XTOP = XLPOS + ADVTOTOP
+ADVSF_R_X2 = 1000mm
+ADVSF_R_Y1 = YLPOS + ADVWIDTH1
+ADVSF_R_Y2 = YLPOS - ADVWIDTH2
+ADVSF_R_ZTANK = CAMPOS_LZ + ADVTOTANKZ + BUFFERSF
+ADVSF_R_ZTOP = CAMPOS_LZ + ADVTOTOPZ
+ADVSF_R_Z2 = -1000mm
+//convert
+ADVSF_R_XTANK = ADVSF_R_XTANK/convfactor
+ADVSF_R_XTOP = ADVSF_R_XTOP/convfactor
+
+ADVSF_R_Y1 = ADVSF_R_Y1/convfactor 
+ADVSF_R_Y2 = ADVSF_R_Y2/convfactor 
+ADVSF_R_ZTANK = ADVSF_R_ZTANK/convfactor
+ADVSF_R_ZTOP = ADVSF_R_ZTOP/convfactor
+
+ENDPROC
+//END
+//==============================================================================================================================
+//FUNC CG SF
+//===================================================================
+//==============================ADVANCE==============================
+//===================================================================
+PROC CGADV
+input "SF CG calibration will start, gantry will move!!\n Remove tools if they are on BH"
+	call SEARCH_SC_LEFT
+	call ADVCAL_LEFT
+	call SEARCH_SC_RIGHT
+	call ADVCAL_RIGHT
+	messagebox "SF Calibration Result":"Left SF First Corner X1: " CMOSF_L_XTANK, "First Corner Y1" CMOSF_L_Y1, "First Corner Z1" CMOSF_L_ZTANK, "Second Corner X2" CMOSF_L_X2, "Second Corner Y2" CMOSF_L_Y2, "Second Corner Z2" CMOSF_L_Z2 , "Right SF First Corner X1: " CMOSF_R_XTANK, "First Corner Y1" CMOSF_R_Y1, "First Corner Z1" CMOSF_R_ZTANK, "Second Corner X2" CMOSF_R_X2, "Second Corner Y2" CMOSF_R_Y2, "Second Corner Z2" CMOSF_R_Z2
+ENDPROC
+
+//===================================================================
+//===========================MAIN FUNCTION===========================
+//===================================================================
+//FUNC MAIN
+PROC main
+call ini
+call CGADV
+ 
+ENDPROC
+//END

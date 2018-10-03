@@ -1,0 +1,182 @@
+//*************************************************************************************************
+//*******			Motion Tracing IPS														*******
+//*******			Author: Mike															*******
+//*******			Change log:																*******
+//*******			Version 1.0     Mike     25-Mar-2018    first version					*******
+//*************************************************************************************************
+//******* 			ini file address : /sd0/datacon/data/OMA_Tracing/single_axis_tracing.ini
+//*************************************************************************************************
+//*******			This IPS can only be used for Covine system with AccurET controllers!!!
+//*************************************************************************************************
+//========================================================================================================
+//FUNC PARAMETER SETTINGS
+SCALAR option,value,loop,OTPloop, return, funcopt
+//TIME POINT
+TIME OTP_tracing
+//END
+
+//FUNC AXIS DEFINITION
+ACTOR XYLeft = AXSYSTEM (personality="MaximXYLeft",trafo="trafoA0G0XYLeft")
+ACTOR XYRight = AXSYSTEM (personality="MaximXYRight",trafo="trafoA0G0XYRight")
+
+ACTOR ZLeft = LINETEL (personality="axisZLeft", trafo="trafoZ0G0Left")
+ACTOR ZRight = LINETEL (personality="axisZRight", trafo="trafoZ0G0Right")
+
+ACTOR YLeft =  LINETEL (personality="axisYLeft")
+ACTOR YRight =  LINETEL (personality="axisYRight")
+
+ACTOR X1Left = LINETEL (personality="axisX1Left", speed = 10mm/s, accel = 35000mm/s2)
+ACTOR X2Left = LINETEL (personality="axisX2Left", speed = 10mm/s, accel = 35000mm/s2)
+ACTOR X1Right = LINETEL (personality="axisX1Right")
+ACTOR X2Right = LINETEL (personality="axisX2Right")
+
+ACTOR FLZLeft = LINETEL (personality = "axisFlipZLeft", speed = 1000mm/s, accel = 35000mm/s2, jerktime = 15ms)
+ACTOR FLZRight = LINETEL (personality = "axisFlipZRight", speed = 1000mm/s, accel = 35000mm/s2, jerktime = 15ms)
+
+ACTOR WTX =  LINETEL (personality = "axisWaferX")
+ACTOR WTY =  LINETEL (personality = "axisWaferY")
+//END
+
+//FUNC INITIALIZATION (INI)
+PROC ini
+	loop = 1
+	OTPloop = 1
+	OTP_tracing = 6s
+	//record home position
+	XYLeft.getPos XYL0
+	XYRight.getPos XYR0
+	ZLeft.getPos ZL0
+	ZRight.getPos ZR0
+	FLZLeft.getPos FLZL0
+	FLZRight.getPos FLZR0
+	WTX.getPos WTX0
+	WTY.getPos WTY0
+ENDPROC
+//END
+//FUNC HOME POSITION
+PROC home_pos
+	PAR
+	ZLeft.goPos ZL0 (feedrate = 10%)
+	ZRight.goPos ZR0 (feedrate = 10%)
+	ENDPAR
+	delay 1s
+	PAR
+	XYLeft.goPos XYL0 (feedrate = 10%)
+	XYRight.goPos XYR0 (feedrate = 10%)
+	ENDPAR
+	delay 1s
+	PAR
+	FLZLeft.goPos FLZL0 (feedrate = 10%)
+	FLZRight.goPos FLZR0 (feedrate = 10%)
+	ENDPAR
+	delay 1s
+	PAR
+	WTX.goPos WTX0 (feedrate = 10%)
+	WTY.goPos WTY0 (feedrate = 10%)
+	ENDPAR
+ENDPROC
+//END
+//FUNC MCALL OPTIONS (MCALL_OPT)
+PROC mcall_opt
+/*
+	//choose the function
+	messagebox "Function Option":"" "1. Friction Measurement", "" "2. Manual Axis Tracing", "" "3. Humming Noise", "" "4. Encoder Signal", input "Option" funcopt
+	//Option 1: friction measurement
+	IF funcopt == 1 THEN
+	messagebox "Axis Option":"X1 Axis" "1. X1-LEFT   2. X1-RIGHT", "X2 Axis" "3. X2-LEFT   4.X2-RIGHT","Y Axis" "5. Y-LEFT   6.Y-RIGHT", "Z Axis" "7.Z-LEFT   8.Z-RIGHT","Flipper Z" "11. Flipper-LEFT   12.Flipper-RIGHT","Wafer Table" "15. Wafer X   16. Wafer Y", input "Axis Option" option
+	ENDIF
+	//Option 2: manual tracing
+	IF funcopt == 2 THEN
+*/
+	messagebox "Axis Option":"X1 Axis" "1. X1-LEFT   2. X1-RIGHT", "X2 Axis" "3. X2-LEFT   4.X2-RIGHT", "Y Axis" "5. Y-LEFT   6.Y-RIGHT", "Z Axis" "7.Z-LEFT   8.Z-RIGHT","Theta Axis" "9. Theta-LEFT   10.Theta-RIGHT", "Flipper Z" "11. Flipper-LEFT   12.Flipper-RIGHT","Flipper Theta" "13. Flipper-LEFT   14. Flipper-RIGHT", "Wafer Table" "15. Wafer X   16. Wafer Y", "Needle Axis" "17. Needle Z", input "Axis Option" option
+/*	ENDIF
+	//Option 3: humming noise
+	IF funcopt == 3 THEN
+	messagebox "Axis Option":"X1 Axis" "1. X1-LEFT   2. X1-RIGHT", "X2 Axis" "3. X2-LEFT   4.X2-RIGHT", "Y Axis" "5. Y-LEFT   6.Y-RIGHT", "Z Axis" "7.Z-LEFT   8.Z-RIGHT","Theta Axis" "9. Theta-LEFT   10.Theta-RIGHT", "Flipper Z" "11. Flipper-LEFT   12.Flipper-RIGHT","Flipper Theta" "13. Flipper-LEFT   14. Flipper-RIGHT", "Wafer Table" "15. Wafer X   16. Wafer Y", "Needle Axis" "17. Needle Z", input "Axis Option" option
+	ENDIF
+	//Option 4: encoder signal
+	IF funcopt == 4 THEN
+	messagebox "Axis Option":"X1 Axis" "1. X1-LEFT   2. X1-RIGHT", "X2 Axis" "3. X2-LEFT   4.X2-RIGHT", "Y Axis" "5. Y-LEFT   6.Y-RIGHT", "Z Axis" "7.Z-LEFT   8.Z-RIGHT","Theta Axis" "9. Theta-LEFT   10.Theta-RIGHT", "Flipper Z" "11. Flipper-LEFT   12.Flipper-RIGHT","Flipper Theta" "13. Flipper-LEFT   14. Flipper-RIGHT", "Wafer Table" "15. Wafer X   16. Wafer Y", "Needle Axis" "17. Needle Z", input "Axis Option" option
+	ENDIF
+*/	
+	//ETEL gets the object based on the function & axis option
+	IF option == 1 THEN mcall "ETLgetObj", "axisX1Left", &value ENDIF //X1
+	IF option == 2 THEN mcall "ETLgetObj", "axisX1Right", &value ENDIF
+	IF option == 3 THEN mcall "ETLgetObj", "axisX2Left", &value ENDIF //X2
+	IF option == 4 THEN mcall "ETLgetObj", "axisX2Right", &value ENDIF
+	IF option == 5 THEN mcall "ETLgetObj", "axisYLeft", &value ENDIF //Y
+	IF option == 6 THEN mcall "ETLgetObj", "axisYRight", &value ENDIF
+	IF option == 7 THEN mcall "ETLgetObj", "axisZLeft", &value ENDIF //Z
+	IF option == 8 THEN mcall "ETLgetObj", "axisZRight", &value ENDIF
+	IF option == 9 THEN mcall "ETLgetObj", "axisThetaLeft", &value ENDIF //Theta
+	IF option == 10 THEN mcall "ETLgetObj", "axisThetaRight", &value ENDIF
+	IF option == 11 THEN mcall "ETLgetObj", "axisFlipZLeft", &value ENDIF //Flipper Z
+	IF option == 12 THEN mcall "ETLgetObj", "axisFlipZRight", &value ENDIF
+	IF option == 13 THEN mcall "ETLgetObj", "axisFlipThetaLeft", &value ENDIF //Flipper Theta
+	IF option == 14 THEN mcall "ETLgetObj", "axisFlipThetaRight", &value ENDIF
+	IF option == 15 THEN mcall "ETLgetObj", "axisWaferX", &value ENDIF //WT
+	IF option == 16 THEN mcall "ETLgetObj", "axisWaferY", &value ENDIF
+	IF option == 17 THEN mcall "ETLgetObj", "axisNeedle", &value ENDIF //Needle
+ENDPROC
+//END
+//FUNC OMA TRACING PERSONALIZED (OTP)
+PROC OTP
+WHILE OTPloop == 1 DO 
+/*		mcall "open", "/sd0/datacon/data/test.ini" ,&return //This function need to be confirmed
+		log return
+		IF return <=0 THEN
+			input "File not found!\n\nPlease make sure the test.ini file is in the target location: /sd0/datacon/data/"
+			log "Ping file returns: ", return
+			OTPloop = 0
+		ELSE 
+			log "test.ini file found"
+*/			
+			input "Use manipulator to move the axis, tracing will start immediately after click OK and last for 6 seconds"
+
+			mcall "ETLdebugTraceStart", "/sd0/datacon/data/single_axis_tracing.ini" 
+			log "ini file loaded"
+			log "============================="
+			log "***                OMA Tracing Enabled               ***"
+			log "============================="
+			delay OTP_tracing
+			input "Tracing Finished"
+			
+			IF input "Do for other axis?" THEN
+				mcall "ETLdebugTraceStopAll"
+				OTPloop = 1 
+			ELSE OTPloop = 0
+				mcall "ETLdebugTraceStopAll"
+				log "============================="
+				log "***               OMA Tracing Disabled               ***"
+				log "============================="	
+			ENDIF
+//		ENDIF
+ENDWHILE		
+ENDPROC
+//END
+
+//FUNC MAIN
+PROC main
+call ini 
+WHILE loop == 1 DO
+	call mcall_opt //this will determine the function and axis for ETEL
+	//1. FRICTION MEASUREMENT, 2 MANUAL TRACING, 3. HUMMING NOISE, 4. ENCODER SIGNAL
+	//call checkfile // if file does not exist, quit, if exist, continue	 
+	//IF funcopt == 1 THEN call FM ENDIF
+	/*IF funcopt == 2 THEN*/ call OTP //ENDIF
+	//IF funcopt == 3 THEN call HN ENDIF
+	//IF funcopt == 4 THEN call ES ENDIF	
+	IF input "Repeat process for other axis?" THEN 
+		loop = 1 
+		//machine home
+		call home_pos
+	ELSE loop = 0
+		//machine home
+		call home_pos
+		log "============================="
+		log "***               Program Ends               ***"
+		log "============================="
+	ENDIF
+ENDWHILE
+ENDPROC
+//END

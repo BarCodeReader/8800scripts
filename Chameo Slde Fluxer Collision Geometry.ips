@@ -1,0 +1,147 @@
+//*=============================================================================================================================
+//*  Project: 8k8 CIP
+//*  Platform: FCQ Chameo
+//*  Description: Crystal Collision Geometry Determination and Parameter check (SEAT-901)
+//*  Author: YIYU
+//*  Date: 08.01.18
+//*  Revisions:
+//*		-v0.1 (08.01.18): Initial version
+//*=============================================================================================================================
+//*=============================================================================================================================
+//Axis
+
+ACTOR XYLeft = AXSYSTEM (personality="MaximXYLeft",trafo="trafoA0G0XYLeft")
+ACTOR XYRight = AXSYSTEM (personality="MaximXYRight",trafo="trafoA0G0XYRight")
+ACTOR ZLeft = LINETEL(personality="axisZLeft", trafo="trafoZ0G0Left")
+ACTOR ZRight = LINETEL(personality="axisZRight", trafo="trafoZ0G0Right")
+
+ACTOR ppx1_li = LINETEL(personality="axisX1Left")
+ACTOR ppx2_li = LINETEL(personality="axisX2Left")
+ACTOR ppy_li =  LINETEL(personality="axisYLeft")
+
+ACTOR ppx1_re = LINETEL(personality="axisX1Right")
+ACTOR ppx2_re = LINETEL(personality="axisX2Right")
+ACTOR ppy_re =  LINETEL(personality="axisYRight")
+
+ACTOR axSFL = ROTSMI(personality="SteppingMotorSlideFluxerLeft", speed=800m¡ã/s, accel=30000m¡ã/s2, scale=15000m¡ã/100step)
+ACTOR axSFR = ROTSMI(personality="SteppingMotorSlideFluxerRight", speed=800m¡ã/s accel=30000m¡ã/s2, scale=15000m¡ã/100step)
+
+//Inputs & Outputs
+ACTOR diSlideFluxerFrontLeft = DIGIN(personality="DigInSlideFluxerFrontLeft")
+ACTOR diSlideFluxerHomeLeft = DIGIN(personality="DigInSlideFluxerHomeLeft")
+ACTOR diSlideFluxerFrontRight = DIGIN(personality="DigInSlideFluxerFrontRight")
+ACTOR diSlideFluxerHomeRight = DIGIN(personality="DigInSlideFluxerHomeRight")
+
+ACTOR RgbLightScDirectLeft = RGBLIGHT(personality="RgbLightScDirectLeft")
+ACTOR RgbLightScRingLeft = RGBLIGHT(personality="RgbLightScRingLeft")
+ACTOR RgbLightScDirectRight = RGBLIGHT(personality="RgbLightScDirectRight")
+ACTOR RgbLightScRingRight = RGBLIGHT(personality="RgbLightScRingRight")
+
+//Cameras
+ACTOR ScLeft = CAMERA(name="ScLeft")
+ACTOR ScRight = CAMERA(name="ScRight")
+
+//=============================================================================================================================
+//parameters
+
+LENGTH2D XYL2D, XYR2D,home2D, INTERPOS
+LENGTH CAMPOS_LX, CAMPOS_LY, CAMPOS_RX, CAMPOS_RY, CAMPOS_LZ, CAMPOS_RZ, XLPOS, YLPOS, XRPOS,YRPOS, homeX, homeY, homeZ
+LENGTH SF_L_X1, SF_L_X2, SF_L_Y1, SF_L_Y2, SF_L_Z1, SF_L_Z2, SF_R_X1, SF_R_X2, SF_R_Y1,SF_R_Y2, SF_R_Z1, SF_R_Z2
+SEARCHPOS sc_left, sc_right
+SCALAR convfactor
+
+//=============================================================================================================================
+
+//FUNC INI
+PROC ini
+	convfactor = 1000000
+
+	XYLeft.getPos home2D
+	homeX = home2D.x
+	homeY = home2D.y
+	ZLeft.getPos homeZ
+ENDPROC
+//END
+//FUNC SEARCH LEFT SIDE
+PROC SEARCH_SC_LEFT
+		input "Step 1/2 Left SF Y position determination. \nOpen manipulator, use left Substrate Camera to move to upper right corner, upper edge of SF dipping plate"
+		    ZLeft.getPos CAMPOS_LZ
+		    XYLeft.getPos XYL2D
+		    YLPOS = XYL2D.y
+		input "Step 2/2 Left X position determination. \nMove left Substrate Camera to upper right corner, right edge of SF dipping plate"
+			XYLeft.getPos XYL2D
+			XLPOS = XYL2D.x 
+ENDPROC
+//END
+//FUNC SEARCH RIGHT SIDE
+PROC SEARCH_SC_RIGHT
+		input "Step 1/2 Right SF Y position determination. \nOpen manipulator, use left Substrate Camera to move to upper left corner, upper edge of SF dipping plate"
+		    ZLeft.getPos CAMPOS_RZ
+		    XYLeft.getPos XYR2D
+		    YRPOS = XYR2D.y
+		input "Step 2/2 Right SF X position determination. \nMove left Substrate Camera to move to upper left corner, left edge of SF dipping plate"
+			XYLeft.getPos XYR2D
+			XRPOS = XYR2D.x 
+ENDPROC
+//END
+//FUNC CAL LEFT
+PROC CAL_LEFT
+SF_L_X1 = XLPOS- 81.5mm
+SF_L_X2 = -1000mm
+SF_L_Y1 = YLPOS + 10mm
+SF_L_Y2 = YLPOS - 61.5mm
+SF_L_Z1 = CAMPOS_LZ + 30mm
+SF_L_Z2 = -1000mm
+
+//convert
+
+SF_L_X1 = SF_L_X1/convfactor
+SF_L_X2 = SF_L_X2/convfactor
+SF_L_Y1 = SF_L_Y1/convfactor
+SF_L_Y2 = SF_L_Y2/convfactor
+SF_L_Z1 = SF_L_Z1/convfactor
+SF_L_Z2 = SF_L_Z2/convfactor
+
+ENDPROC
+//END
+//FUNC CAL RIGHT
+PROC CAL_RIGHT
+SF_R_X1 = XRPOS + 81.5mm
+SF_R_X2 = 1000mm
+SF_R_Y1 = YRPOS + 10mm
+SF_R_Y2 = YRPOS - 61.5mm
+SF_R_Z1 = CAMPOS_RZ + 30mm
+SF_R_Z2 = -1000mm
+
+//convert
+
+SF_R_X1 = SF_R_X1/convfactor
+SF_R_X2 = SF_R_X2/convfactor
+SF_R_Y1 = SF_R_Y1/convfactor
+SF_R_Y2 = SF_R_Y2/convfactor
+SF_R_Z1 = SF_R_Z1/convfactor
+SF_R_Z2 = SF_R_Z2/convfactor
+
+ENDPROC
+//END
+//=============================================================================================================================
+//FUNC MAIN
+PROC main
+	call ini
+	input "SF CG calibration will start, gantry will move!!\n Remove tools if they are on BH"
+
+	call SEARCH_SC_LEFT
+	call CAL_LEFT
+	call SEARCH_SC_RIGHT
+	call CAL_RIGHT
+	
+	delay 1s
+	XYLeft.getPos INTERPOS
+	INTERPOS.y = homeY
+			
+	ZLeft.goPos homeZ (feedrate =5%)
+	XYLeft.goPos INTERPOS
+	XYLeft.goPos home2D (feedrate =5%)
+	messagebox "SF Calibration Result":"Left SF First Corner X1: " SF_L_X1, "First Corner Y1" SF_L_Y1, "First Corner Z1" SF_L_Z1, "Second Corner X2" SF_L_X2, "Second Corner Y2" SF_L_Y2, "Second Corner Z2" SF_L_Z2 , "Right SF First Corner X1: " SF_R_X1, "First Corner Y1" SF_R_Y1, "First Corner Z1" SF_R_Z1, "Second Corner X2" SF_R_X2, "Second Corner Y2" SF_R_Y2, "Second Corner Z2" SF_R_Z2
+ENDPROC
+//END

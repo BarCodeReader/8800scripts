@@ -1,0 +1,225 @@
+//===================================================================
+//===============================AXIS================================
+//===================================================================
+//FUNC AXIS
+ACTOR XYLeft = AXSYSTEM (personality="MaximXYLeft",trafo="trafoA0G0XYLeft")
+ACTOR XYRight = AXSYSTEM (personality="MaximXYRight",trafo="trafoA0G0XYRight")
+ACTOR ZLeft = LINETEL(personality="axisZLeft", trafo="trafoZ0G0Left")
+ACTOR ZRight = LINETEL(personality="axisZRight", trafo="trafoZ0G0Right")
+
+ACTOR ppx1_li = LINETEL(personality="axisX1Left")
+ACTOR ppx2_li = LINETEL(personality="axisX2Left")
+ACTOR ppy_li =  LINETEL(personality="axisYLeft")
+
+ACTOR ppx1_re = LINETEL(personality="axisX1Right")
+ACTOR ppx2_re = LINETEL(personality="axisX2Right")
+ACTOR ppy_re =  LINETEL(personality="axisYRight")
+//END
+
+//FUNC PARAMETER
+SCALAR cycle, loop, option, machinetype,cameraoption,convfactor
+//===================================================================
+//=============================CONSTANTS=============================
+//===================================================================
+//PRISM
+LENGTH WINGX, WINGY1, WINGZ, WINGY2, BUFFER, BUFFERSF//offset of the wing
+//===================================================================
+//============================PARAMETERS=============================
+//===================================================================
+//ONLY FOR CGPRISM
+LENGTH2D XYL0,XYR0,XYL1,XYR1,XYL,XYR
+LENGTH XL0,XL1,YL0,YL1, XR0,XR1,YR0,YR1, XLF, XRF, YF,ZF,ZL0,ZR0,ZL,ZR,ZL1,ZR1
+LENGTH2D corner1, corner2, corner3, corner4
+SCALAR tan_theta, cos_theta, sin_theta
+//END
+//===================================================================
+//======================CONSTANT LOOK UP TABLE=======================
+//===================================================================
+//FUNC INI
+PROC ini
+//global
+	convfactor = 1000000
+	loop=1
+	cycle = 1
+	tolerance_length = 0.1mm
+	tolerance_angle = 0.1
+//CGPRISM
+	BUFFER = 5000000nm
+	WINGX = 57500000nm
+	WINGY1 = 22500000nm
+	WINGZ = 27000000nm
+	WINGY2 = 57500000nm
+ENDPROC
+//END
+//===================================================================
+//========================WAFER CAMERA PRISM=========================
+//===================================================================
+//FUNC CG PRISM
+
+PROC CGPRISM
+
+input "please clamp the tool onto the prism, then click OK"
+input "open manipulator, use left/right substrate camera to focus and search the circle on the left wing of the tool/nafter finish, click OK"
+//axis record here
+XYLeft.getPos XYL0
+XYRight.getPos XYR0
+ZLeft.getPos ZL0
+ZRight.getPos ZR0
+input "use the same camera to focus and search the circle on the right wing of the tool/after finish, click OK"
+//axis record here
+XYLeft.getPos XYL1
+XYRight.getPos XYR1
+ZLeft.getPos ZL1
+ZRight.getPos ZR1
+input "Which substrate camera was used/n/n1.left/n2.right":"":cameraoption
+//data processing
+IF cameraoption == 1 THEN
+	XL0=XYL0.x
+	YL0=XYL0.y
+	XL1=XYL1.x
+	YL1=XYL1.y	
+//calculation
+//rotating angle
+tan_theta = (YL1-YL0)/(XL1-XL0)
+sin_theta = sqrt((tan_theta*tan_theta)/(1+tan_theta*tan_theta))
+cos_theta = sqrt(1/(1+tan_theta*tan_theta))
+//corner position
+corner1.x = XL0 + (WINGX*cos_theta + WINGY1*sin_theta)
+corner1.y = YL0 - (-WINGX*sin_theta + WINGY1*cos_theta)
+
+corner2.x = XL1 - (WINGX*cos_theta - WINGY1*sin_theta)
+corner2.y = YL1 - (WINGX*sin_theta + WINGY1*cos_theta)
+
+corner3.x = XL1 - (WINGX*cos_theta - WINGY2*sin_theta)
+corner3.y = YL1 - (WINGX*sin_theta + WINGY2*cos_theta)
+
+corner4.x = XL0 + (WINGX*cos_theta + WINGY2*sin_theta)
+corner4.y = YL0 - (- WINGX*sin_theta + WINGY2*cos_theta)
+
+/* for debug use
+log "================================="
+log tan_theta
+log sin_theta
+log cos_theta
+log "================================="
+log XL0
+log XL1
+log YL0
+log YL1
+log "================================="
+log corner1.x
+log corner1.y
+log corner2.x
+log corner2.y
+log corner3.x
+log corner3.y
+log corner4.x
+log corner4.y
+log "================================="
+*/
+
+//final position
+IF corner1.x < corner4.x THEN //use corner 1 and 3 for x, 2 for y
+	XLF = corner1.x - BUFFER
+	XRF = corner3.x + BUFFER
+	YF = corner2.y + BUFFER
+	ZF = WINGZ + (ZL0+ZL1)/2 + BUFFER
+	//convert to mm
+	XLF = XLF/convfactor
+	YF = YF/convfactor
+	XRF = XRF/convfactor
+	ZF = ZF/convfactor
+	messagebox "Collision Geometry":"first corner x(mm): " XLF, "first corner y(mm):" YF, "first corner z(mm):" ZF, "second corner x(mm):" XRF, "second corner y(mm):" -1000, "second corner z(mm):" -1000
+ELSE
+	XLF = corner4.x - BUFFER//use corner 2 and 4 for x, 1 for y
+	XRF = corner2.x + BUFFER
+	YF = corner1.y + BUFFER
+	ZF = WINGZ +  (ZR0 + ZR1)/2 + BUFFER
+	//convert to mm
+	XLF = XLF/convfactor
+	YF = YF/convfactor
+	XRF = XRF/convfactor
+	ZF = ZF/convfactor
+	messagebox "Collision Geometry":"first corner x(mm): " XLF, "first corner y(mm):" YF, "first corner z(mm):" ZF, "second corner x(mm):" XRF, "second corner y(mm):" -1000, "second corner z(mm):" -1000
+ENDIF
+
+ENDIF
+
+IF cameraoption == 2 THEN
+	XR0=XYR0.x
+	YR0=XYR0.y
+	XR1=XYR1.x
+	YR1=XYR1.y	
+//calculation
+//rotating angle
+tan_theta = (YL1-YL0)/(XL1-XL0)
+sin_theta = sqrt((tan_theta*tan_theta)/(1+tan_theta*tan_theta))
+cos_theta = sqrt(1/(1+tan_theta*tan_theta))
+//corner position
+corner1.x = XR0 + (WINGX*cos_theta + WINGY1*sin_theta)
+corner1.y = YR0 - (-WINGX*sin_theta + WINGY1*cos_theta)
+
+corner2.x = XR1 - (WINGX*cos_theta - WINGY1*sin_theta)
+corner2.y = YR1 - (WINGX*sin_theta + WINGY1*cos_theta)
+
+corner3.x = XR1 - (WINGX*cos_theta - WINGY2*sin_theta)
+corner3.y = YR1 - (WINGX*sin_theta + WINGY2*cos_theta)
+
+corner4.x = XR0 + (WINGX*cos_theta + WINGY2*sin_theta)
+corner4.y = YR0 - ( - WINGX*sin_theta + WINGY2*cos_theta)
+/* for debug use
+log "================================="
+log tan_theta
+log sin_theta
+log cos_theta
+log "================================="
+log XL0
+log XL1
+log YL0
+log YL1
+log "================================="
+log corner1.x
+log corner1.y
+log corner2.x
+log corner2.y
+log corner3.x
+log corner3.y
+log corner4.x
+log corner4.y
+log "================================="
+*/
+//final position
+IF corner1.x < corner4.x THEN //use corner 1 and 3 for x, 2 for y
+XLF = corner1.x - BUFFER
+XRF = corner3.x + BUFFER
+YF = corner2.y + BUFFER
+ZF = WINGZ +(ZL0+ZL1)/2 + BUFFER
+	//convert
+	XLF = XLF/convfactor
+	YF = YF/convfactor
+	XRF = XRF/convfactor
+	ZF = ZF/convfactor
+messagebox "Collision Geometry":"first corner x(mm): " XLF, "first corner y(mm):" YF, "first corner z(mm):" ZF, "second corner x(mm):" XRF, "second corner y(mm):" -1000, "second corner z(mm):" -1000
+ELSE
+XLF = corner4.x - BUFFER//use corner 2 and 4 for x, 1 for y
+XRF = corner2.x + BUFFER
+YF = corner1.y + BUFFER
+ZF = WINGZ + (ZR0 + ZR1)/2 + BUFFER
+	//convert
+	XLF = XLF/convfactor
+	YF = YF/convfactor
+	XRF = XRF/convfactor
+	ZF = ZF/convfactor
+messagebox "Collision Geometry":"first corner x(mm): " XLF, "first corner y(mm):" YF, "first corner z(mm):" ZF, "second corner x(mm):" XRF, "second corner y(mm):" -1000, "second corner z(mm):" -1000
+ENDIF	
+ENDIF
+ENDPROC
+//END
+
+//FUNC MAIN
+PROC main
+ call ini
+ call CGPRISM 
+ input "Collision Geometry of Wafer Camera Prism Finished."
+ENDPROC
+//END

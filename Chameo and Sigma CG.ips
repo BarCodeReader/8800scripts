@@ -1,0 +1,245 @@
+//===================================================================
+//===============================AXIS================================
+//===================================================================
+//FUNC AXIS
+ACTOR XYLeft = AXSYSTEM (personality="MaximXYLeft",trafo="trafoA0G0XYLeft")
+ACTOR XYRight = AXSYSTEM (personality="MaximXYRight",trafo="trafoA0G0XYRight")
+ACTOR ZLeft = LINETEL(personality="axisZLeft", trafo="trafoZ0G0Left")
+ACTOR ZRight = LINETEL(personality="axisZRight", trafo="trafoZ0G0Right")
+
+ACTOR ppx1_li = LINETEL(personality="axisX1Left")
+ACTOR ppx2_li = LINETEL(personality="axisX2Left")
+ACTOR ppy_li =  LINETEL(personality="axisYLeft")
+
+ACTOR ppx1_re = LINETEL(personality="axisX1Right")
+ACTOR ppx2_re = LINETEL(personality="axisX2Right")
+ACTOR ppy_re =  LINETEL(personality="axisYRight")
+
+//Cameras
+ACTOR ScLeft = CAMERA(name="ScLeft")
+ACTOR ScRight = CAMERA(name="ScRight")
+//END
+
+//FUNC PARAMETER
+SCALAR cycle, loop, option, machinetype,cameraoption,convfactor
+//===================================================================
+//=============================CONSTANTS=============================
+//===================================================================
+//PRISM
+LENGTH WINGX, WINGY1, WINGZ, WINGY2, BUFFER, BUFFERSF//offset of the wing
+//SF CHAMEO & SIGMA
+LENGTH SGMWIDTH1,SGMWIDTH2, SGMTOTANK, SGMTOTANKZ,SGMTOTOPZ,SGMTOTOP
+LENGTH CMOWIDTH1,CMOWIDTH2, CMOTOTANK, CMOTOTANKZ,CMOTOTOPZ,CMOTOTOP
+//===================================================================
+//============================PARAMETERS=============================
+//===================================================================
+//ONLY FOR CGSF
+LENGTH2D XYL2D, XYR2D
+LENGTH CAMPOS_LZ, CAMPOS_RZ, XLPOS, YLPOS, XRPOS,YRPOS
+//CHAMEO
+LENGTH CMOSF_L_XTANK,CMOSF_L_XTOP, CMOSF_L_X2, CMOSF_L_Y1, CMOSF_L_Y2, CMOSF_L_ZTANK,CMOSF_L_ZTOP, CMOSF_L_Z2, CMOSF_R_XTANK, CMOSF_R_XTOP, CMOSF_R_X2, CMOSF_R_Y1,CMOSF_R_Y2, CMOSF_R_ZTANK,CMOSF_R_ZTOP, CMOSF_R_Z2
+//SIGMA
+LENGTH SGMSF_L_XTANK,SGMSF_L_XTOP, SGMSF_L_X2, SGMSF_L_Y1, SGMSF_L_Y2, SGMSF_L_ZTANK,SGMSF_L_ZTOP, SGMSF_L_Z2, SGMSF_R_XTANK,SGMSF_R_XTOP, SGMSF_R_X2, SGMSF_R_Y1,SGMSF_R_Y2, SGMSF_R_ZTANK,SGMSF_R_ZTOP, SGMSF_R_Z2
+//END
+//===================================================================
+//======================CONSTANT LOOK UP TABLE=======================
+//===================================================================
+//FUNC INI
+PROC ini
+//global
+	convfactor = 1000000
+	loop=1
+	cycle = 1
+	tolerance_length = 0.1mm
+	tolerance_angle = 0.1
+//CGSF
+	BUFFERSF = 5000000nm
+
+	//CHAMEO
+	SGMWIDTH1 = 9500000nm
+	SGMWIDTH2 = 62000000nm
+	SGMTOTANK = 70950000nm
+	SGMTOTANKZ = 30000000nm
+	SGMTOTOP = 96000000nm
+	SGMTOTOPZ = 35500000nm
+	//SIGMA
+	CMOWIDTH1 = 9500000nm
+	CMOWIDTH2 = 62000000nm
+	CMOTOTANK = 70950000nm
+	CMOTOTANKZ = 30000000nm
+	CMOTOTOP = 96000000nm
+	CMOTOTOPZ = 35500000nm
+
+ENDPROC
+//END
+//===================================================================
+//===========================SLIDE FLUXER============================
+//===================================================================
+
+//FUNC SEARCH_SC_LEFT
+PROC SEARCH_SC_LEFT
+		input "Step 1/2 Left SF Y position determination. \nOpen manipulator, use left Substrate Camera to move to upper right corner, upper edge of SF dipping plate"
+		    ZLeft.getPos CAMPOS_LZ
+		    XYLeft.getPos XYL2D
+		    YLPOS = XYL2D.y
+		input "Step 2/2 Left X position determination. \nMove left Substrate Camera to upper right corner, right edge of SF dipping plate"
+			XYLeft.getPos XYL2D
+			XLPOS = XYL2D.x 
+ENDPROC
+//END
+//FUNC SEARCH_SC_RIGHT
+PROC SEARCH_SC_RIGHT
+		input "Step 1/2 Right SF Y position determination. \nOpen manipulator, use left Substrate Camera to move to upper left corner, upper edge of SF dipping plate"
+		    ZLeft.getPos CAMPOS_RZ
+		    XYLeft.getPos XYR2D
+		    YRPOS = XYR2D.y
+		input "Step 2/2 Right SF X position determination. \nMove left Substrate Camera to move to upper left corner, left edge of SF dipping plate"
+			XYLeft.getPos XYR2D
+			XRPOS = XYR2D.x 
+ENDPROC
+//END
+//===================================================================
+//==============================CHAMEO===============================
+//===================================================================
+//FUNC CAL_LEFT CHAMEO
+PROC CMOCAL_LEFT
+
+CMOSF_L_XTANK = XLPOS- CMOTOTANK
+CMOSF_L_XTOP = XLPOS- CMOTOTOP
+CMOSF_L_X2 = -1000mm
+CMOSF_L_Y1 = YLPOS + CMOWIDTH1
+CMOSF_L_Y2 = YLPOS - CMOWIDTH2
+CMOSF_L_ZTANK = CAMPOS_LZ + CMOTOTANKZ + BUFFERSF
+CMOSF_L_ZTOP = CAMPOS_LZ + CMOTOTOPZ
+CMOSF_L_Z2 = -1000mm
+//convert
+CMOSF_L_XTANK = CMOSF_L_XTANK/convfactor
+CMOSF_L_XTOP = CMOSF_L_XTOP/convfactor
+
+CMOSF_L_Y1 = CMOSF_L_Y1/convfactor 
+CMOSF_L_Y2 = CMOSF_L_Y2/convfactor 
+CMOSF_L_ZTANK = CMOSF_L_ZTANK/convfactor
+CMOSF_L_ZTOP = CMOSF_L_ZTOP/convfactor
+
+ENDPROC
+//END
+//FUNC CAL_RIGHT CHAMEO
+PROC CMOCAL_RIGHT
+CMOSF_R_XTANK = XLPOS + CMOTOTANK
+CMOSF_R_XTOP = XLPOS + CMOTOTOP
+CMOSF_R_X2 = 1000mm
+CMOSF_R_Y1 = YLPOS + CMOWIDTH1
+CMOSF_R_Y2 = YLPOS - CMOWIDTH2
+CMOSF_R_ZTANK = CAMPOS_LZ + CMOTOTANKZ + BUFFERSF
+CMOSF_R_ZTOP = CAMPOS_LZ + CMOTOTOPZ
+CMOSF_R_Z2 = -1000mm
+//convert
+CMOSF_R_XTANK = CMOSF_R_XTANK/convfactor
+CMOSF_R_XTOP = CMOSF_R_XTOP/convfactor
+
+CMOSF_R_Y1 = CMOSF_R_Y1/convfactor 
+CMOSF_R_Y2 = CMOSF_R_Y2/convfactor 
+CMOSF_R_ZTANK = CMOSF_R_ZTANK/convfactor
+CMOSF_R_ZTOP = CMOSF_R_ZTOP/convfactor
+
+ENDPROC
+//END
+//===================================================================
+//===============================SIGMA===============================
+//===================================================================
+//FUNC CAL_RIGHT SIGMA
+PROC SGMCAL_RIGHT
+SGMSF_R_XTANK = XLPOS + SGMTOTANK
+SGMSF_R_XTOP = XLPOS + SGMTOTOP
+SGMSF_R_X2 = 1000mm
+SGMSF_R_Y1 = YLPOS + SGMWIDTH1
+SGMSF_R_Y2 = YLPOS - SGMWIDTH2
+SGMSF_R_ZTANK = CAMPOS_LZ + SGMTOTANKZ + BUFFERSF
+SGMSF_R_ZTOP = CAMPOS_LZ + SGMTOTOPZ
+SGMSF_R_Z2 = -1000mm
+//convert
+SGMSF_R_XTANK = SGMSF_R_XTANK/convfactor
+SGMSF_R_XTOP = SGMSF_R_XTOP/convfactor
+
+SGMSF_R_Y1 = SGMSF_R_Y1/convfactor 
+SGMSF_R_Y2 = SGMSF_R_Y2/convfactor 
+SGMSF_R_ZTANK = SGMSF_R_ZTANK/convfactor
+SGMSF_R_ZTOP = SGMSF_R_ZTOP/convfactor
+
+ENDPROC
+//END
+//FUNC CAL_LEFT SIGMA
+PROC SGMCAL_LEFT
+
+SGMSF_L_XTANK = XLPOS- SGMTOTANK
+SGMSF_L_XTOP = XLPOS- SGMTOTOP
+SGMSF_L_X2 = -1000mm
+SGMSF_L_Y1 = YLPOS + SGMWIDTH1
+SGMSF_L_Y2 = YLPOS - SGMWIDTH2
+SGMSF_L_ZTANK = CAMPOS_LZ + SGMTOTANKZ + BUFFERSF
+SGMSF_L_ZTOP = CAMPOS_LZ + SGMTOTOPZ
+SGMSF_L_Z2 = -1000mm
+//convert
+SGMSF_L_XTANK = SGMSF_L_XTANK/convfactor
+SGMSF_L_XTOP = SGMSF_L_XTOP/convfactor
+
+SGMSF_L_Y1 = SGMSF_L_Y1/convfactor 
+SGMSF_L_Y2 = SGMSF_L_Y2/convfactor 
+SGMSF_L_ZTANK = SGMSF_L_ZTANK/convfactor
+SGMSF_L_ZTOP = SGMSF_L_ZTOP/convfactor
+
+ENDPROC
+//END
+
+//===================================================================
+//FUNC CG SF
+//===================================================================
+//===============================SIGMA===============================
+//===================================================================
+PROC CGSIGMA
+input "SF CG calibration will start, gantry will move!!\n Remove tools if they are on BH"
+	call SEARCH_SC_LEFT
+	call SGMCAL_LEFT
+	call SEARCH_SC_RIGHT
+	call SGMCAL_RIGHT
+	messagebox "SF Calibration Result":"Left SF First Corner X1: " CMOSF_L_XTANK, "First Corner Y1" CMOSF_L_Y1, "First Corner Z1" CMOSF_L_ZTANK, "Second Corner X2" CMOSF_L_X2, "Second Corner Y2" CMOSF_L_Y2, "Second Corner Z2" CMOSF_L_Z2 , "Right SF First Corner X1: " CMOSF_R_XTANK, "First Corner Y1" CMOSF_R_Y1, "First Corner Z1" CMOSF_R_ZTANK, "Second Corner X2" CMOSF_R_X2, "Second Corner Y2" CMOSF_R_Y2, "Second Corner Z2" CMOSF_R_Z2
+ENDPROC
+//===================================================================
+//==============================CHAMEO===============================
+//===================================================================
+PROC CGCHAMEO
+input "SF CG calibration will start, gantry will move!!\n Remove tools if they are on BH"
+	call SEARCH_SC_LEFT
+	call CMOCAL_LEFT
+	call SEARCH_SC_RIGHT
+	call CMOCAL_RIGHT
+	messagebox "SF Calibration Result":"Left SF First Corner X1: " CMOSF_L_XTANK, "First Corner Y1" CMOSF_L_Y1, "First Corner Z1" CMOSF_L_ZTANK, "Second Corner X2" CMOSF_L_X2, "Second Corner Y2" CMOSF_L_Y2, "Second Corner Z2" CMOSF_L_Z2 , "Right SF First Corner X1: " CMOSF_R_XTANK, "First Corner Y1" CMOSF_R_Y1, "First Corner Z1" CMOSF_R_ZTANK, "Second Corner X2" CMOSF_R_X2, "Second Corner Y2" CMOSF_R_Y2, "Second Corner Z2" CMOSF_R_Z2
+ENDPROC
+//===================================================================
+//===========================CGSF MASTER=============================
+//===================================================================
+PROC CGSF
+WHILE cycle == 1 DO
+	input "please indicate the machine type\n\n1.Sigma\n\n2.Chameo":"":machinetype
+	IF machinetype == 1 THEN 
+	call CGSIGMA 
+	cycle = 0
+	ENDIF
+	
+	IF machinetype == 2 THEN 
+	call CGCHAMEO 
+	cycle = 0
+	ENDIF	
+	IF machinetype<1 | machinetype>2 THEN cycle = 1 ENDIF
+ENDWHILE
+ENDPROC
+//END
+//===================================================================
+//===========================MAIN FUNCTION===========================
+//===================================================================
+//FUNC MAIN
+PROC main
+ call ini
+ call CGSF 
+ENDPROC
+//END

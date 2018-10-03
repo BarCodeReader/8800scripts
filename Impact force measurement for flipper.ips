@@ -1,0 +1,233 @@
+//**************************bondhead parameter definition
+
+ACTOR BHLZ = LINETEL (personality="axisZLeft", speed=20 mm/s, accel= 500mm/s2, jerktime = 30 ms)  
+ACTOR    ETLXY= AXSYSTEM (personality="MaximXYLeft", trafo="trafoA0G0XYLeft")
+LENGTH2D BHLXY0 //Bond-Head-Left-XY
+LENGTH BHLZ0, BHLZ1, BHLZ2, BHOTDistance
+SPEED BHTSpeed
+TIME DTime
+SCALAR RTime, check, BHTValid // check is designed to ensure all the steps are correctly setup by user
+
+//**************************fluxer parameter definition
+
+LENGTH FLZ0, FLZ1, FLZ2, FLOTDistance
+SPEED FTSpeed
+SCALAR PPTValid
+LENGTH2D FLXY0
+
+//**************************flipper parameter definition
+
+ACTOR FLPZL = LINETEL (personality = "axisFlipZLeft",speed = 1000mm/s, accel = 30000mm/s2, jerktime = 20ms)
+LENGTH FLPZ0, FLPZ1, FLPZ2, FLPOTDistance
+SPEED FLPSpeed
+SCALAR FLPValid
+LENGTH2D FLPXY0
+
+//**************************system parameter definition
+
+SCALAR MainFuncFlag, BonFuncFlag, InputFlagBond, InputFlagMain
+
+//**************************function initialization
+
+PROC ini
+	MainFuncFlag = 0
+	InputFlagMain = 0
+	BonFuncFlag = 0
+	InputFlagBond = 0
+	BHOTDistance = 0mm
+	BHTSpeed = 0mm/s
+	FLOTDistance = 0mm
+	FTSpeed = 0mm/s
+	FLPOTDistance = 0mm
+	FLPSpeed = 0mm/s
+	RTime = 0
+	check = 0
+	BHTValid = 0
+	PPTValid = 0
+	FLPValid = 0
+ENDPROC
+
+//============================================================================================================================
+//================================================== Program 1  Bondhead =====================================================
+//============================================================================================================================
+
+PROC PPTD
+	WHILE RTime > 0 DO
+		
+		BHLZ.goPos FLZ2 (speed = FTSpeed ,accel = 30000mm/s2)
+		delay DTime
+		BHLZ.goPos FLZ0 (speed = 10mm/s ,accel = 30000mm/s2) //back to initial position
+		delay 500us
+		RTime = RTime - 1
+		
+	ENDWHILE
+ENDPROC
+// PP teaching
+PROC PPTeaching
+	WHILE PPTValid == 0 DO //suppose the user will give a valid bond head teaching
+		IF input "step 2/4 use manipulater to move BH above the sensor about 3-5cm, then click OK" THEN
+			BHLZ.getPos FLZ0 //the initial position z for the touch down
+			ETLXY.getPos FLXY0 //the initial position xy for the touch down
+			check = check + 1 //check should be 1 now
+		ENDIF
+		IF input "step 3/4 move the z slowly until the sensor gives a value, then click OK" THEN
+			BHLZ.getPos FLZ1 //the surface of sensor
+			delay 1s
+			BHLZ.goPos FLZ0 //go back to the initial position
+			check = check + 1 //check should be 2 now
+		ENDIF 
+		messagebox "step 4/4 parameter settings for the touch down": input "travel speed (mm/s)" FTSpeed, input "overtravel distance (um)" FLOTDistance, input "delay time (us)" DTime, input "run times" RTime
+		FTSpeed = FTSpeed * 1000 //transfer to mm/s
+		FLOTDistance = FLOTDistance * 1000 //transfer to um
+	
+		IF check == 2 THEN //only step 2 & 3 are ok can trigger this while loop (touch down)
+			FLZ2 = FLZ1 - FLOTDistance //The real position we want to go
+			
+			call PPTD //bond head do the touch down
+			
+			PPTValid = 1 //the bond head touch down loop finishes
+		ELSE
+		input "teaching invalid. please re-do step 2 & 3 to setup the process"
+		ENDIF
+	
+	ENDWHILE 
+ENDPROC
+//bond move down for TS
+PROC BHTD
+	WHILE RTime > 0 DO
+		
+		BHLZ.goPos BHLZ2 (speed = TSpeed ,accel = 30000mm/s2)
+		delay DTime
+		BHLZ.goPos BHLZ0 (speed = 10mm/s ,accel = 30000mm/s2) //back to initial position
+		delay 500us
+		RTime = RTime - 1
+		
+	ENDWHILE
+ENDPROC
+//bond teaching
+PROC BHTeaching //bondhead will move to TS
+	WHILE BHTValid == 0 DO //suppose the user will give a valid bond head teaching
+		IF input "step 2/4 use manipulater to move BH above the sensor about 3-5cm, then click OK" THEN
+			BHLZ.getPos BHLZ0 //the initial position z for the touch down
+			ETLXY.getPos BHLXY0 //the initial position xy for the touch down
+			check = check + 1 //check should be 1 now
+		ENDIF
+		IF input "step 3/4 move the z slowly until the sensor gives a value, then click OK" THEN
+			BHLZ.getPos BHLZ1 //the surface of sensor
+			delay 1s
+			BHLZ.goPos BHLZ0 //go back to the initial position
+			check = check + 1 //check should be 2 now
+		ENDIF 
+		messagebox "step 4/4 parameter settings for the touch down": input "travel speed (mm/s)" TSpeed, input "overtravel distance (um)" BHOTDistance, input "delay time (us)" DTime, input "run times" RTime
+		TSpeed = TSpeed * 1000 //transfer to mm/s
+		BHOTDistance = BHOTDistance * 1000 //transfer to um
+	
+		IF check == 2 THEN //only step 2 & 3 are ok can trigger this while loop (touch down)
+			BHLZ2 = BHLZ1 - BHOTDistance //The real position we want to go
+			
+			call BHTD //bond head do the touch down
+			
+			BHTValid = 1 //the bond head touch down loop finishes
+		ELSE
+		input "teaching invalid. please re-do step 2 & 3 to setup the process"
+		ENDIF
+	
+	ENDWHILE 
+ENDPROC
+
+//main function for Bondhead
+PROC Bondhead
+
+	WHILE InputFlagBond ==0 DO
+	
+	input "step 1/4 please indicate the function: 1=bonding process on TS, 2=dip process on fluxer":"":BonFuncFlag
+	
+	IF BonFuncFlag==1 THEN
+	call BHTeaching
+	InputFlagBond = 1
+	ENDIF
+	
+	IF BonFuncFlag==2 THEN
+	call PPTeaching
+	InputFlagBond = 1
+	ENDIF
+
+	ENDWHILE
+ENDPROC
+//============================================================================================================================
+//=================================================== Program 2  Flipper =====================================================
+//============================================================================================================================
+//function flipper
+//z-down, theta arm hold
+PROC FLPTD
+	WHILE RTime > 0 DO
+		
+		BHLZ.goPos FLPZ2 (speed = FLPSpeed ,accel = 30000mm/s2)
+		delay DTime
+		BHLZ.goPos FLPZ0 (speed = 10mm/s ,accel = 30000mm/s2) //back to initial position
+		delay 500us
+		RTime = RTime - 1
+		
+	ENDWHILE
+ENDPROC
+//run times
+PROC Flipper
+	WHILE FLPValid == 0 DO //suppose the user will give a valid bond head teaching
+		IF input "step 1/3 open toolbox and flip the arm to the upper position, use manipulater to move BH above the sensor about 3-5cm, then click OK" THEN
+			BHLZ.getPos FLPZ0 //the initial position z for the touch down
+			ETLXY.getPos FLPXY0 //the initial position xy for the touch down
+			check = check + 1 //check should be 1 now
+			//brake closes?
+		ENDIF
+		IF input "step 2/3 move the z slowly until the sensor gives a value, then click OK" THEN
+			BHLZ.getPos FLPZ1 //the surface of sensor
+			delay 1s
+			BHLZ.goPos FLPZ0 //go back to the initial position
+			check = check + 1 //check should be 2 now
+		ENDIF 
+		messagebox "step 3/3 parameter settings for the touch down": input "travel speed (mm/s)" FLPSpeed, input "overtravel distance (um)" FLPOTDistance, input "delay time (us)" DTime, input "run times" RTime
+		FLPSpeed = FLPSpeed * 1000 //transfer to mm/s
+		FLPOTDistance = FLPOTDistance * 1000 //transfer to um
+	
+		IF check == 2 THEN //only step 2 & 3 are ok can trigger this while loop (touch down)
+			BHLZ2 = FLPZ1 - FLPOTDistance //The real position we want to go
+			
+			call FLPTD //bond head do the touch down
+			
+			FLPValid = 1 //the bond head touch down loop finishes
+		ELSE
+		input "teaching invalid. please re-do step 2 & 3 to setup the process"
+		ENDIF
+	
+	ENDWHILE 
+
+
+ENDPROC
+//============================================================================================================================
+//=================================================== Program Main ===========================================================
+//============================================================================================================================
+
+PROC main
+	
+	WHILE InputFlagMain==0 DO
+		call ini //need to reset all the parameter every loop we run
+	
+		input "indicate function to run: 1=bondhead, 2=flipper":"":MainFuncFlag
+	
+		IF MainFuncFlag == 1 THEN
+			log "Bondhead function will start, data input is required"
+			call Bondhead
+		ENDIF
+	
+		IF MainFuncFlag == 2 THEN
+			log "Flipper function will start, data input is required"
+			call Flipper
+		ENDIF
+	
+		IF input "continue the measurement?" != ok THEN //if the user click the cancel button, then end the program
+			InputFlagMain=1
+			log "program ends"
+		ENDIF
+	
+	ENDWHILE
+ENDPROC

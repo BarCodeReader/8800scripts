@@ -1,0 +1,733 @@
+
+//THIS SCRIPT IS ONLY FOR LEFT SIDE FLIPPER.
+
+//FUNC HEADER
+SCALAR assembly, assembly_2, softwareversion, creation_date, creation_year, release_date, release_year
+// *****************************************************************************************
+// ********************************** INTERPRETER-HEADER ***********************************
+// *****************************************************************************************
+
+PROC programm_header
+//		program_for 		= Flipper left
+		assembly 		= 5002
+		assembly_2		= 0358
+		creation_date 		= 22.03
+		creation_year 		= 2017
+		release_date 		= 22.03
+		release_year 		= 2017
+//		made_by			= MALE / KLMI	
+		softwareversion		= 1.0
+ENDPROC
+//END
+//FUNC HISTORY OF CHANGE
+// *****************************************************************************************
+// ********************************** HISTORIE OF CHANGES **********************************
+// *****************************************************************************************
+
+
+// ***		derived from:			92000650035
+// ***		made by:				MALE/STMAR
+// ***		date:				    27.02.2014
+
+
+// ***		change to softwareversion	-->	V2.0
+// ***		change-date		:	XX-XX-2017
+// ***		mofified by		:	MALE
+// ***		changes/description	:	description of changes
+
+// ***		change to softwareversion	-->	V3.0
+// ***		change-date		:	XX-XX-2017
+// ***		mofified by		:	MALE
+// ***		changes/description	:	description of changes
+
+// ***		change to softwareversion	-->	V4.0
+// ***		change-date		:	XX-XX-2017
+// ***		mofified by		:	MALE
+// ***		changes/description	:	description of changes
+
+// ***		change to softwareversion	-->	V5.0
+// ***		change-date		:	XX-XX-2017
+// ***		mofified by		:	MALE
+// ***		changes/description	:	description of changes
+
+// ***		change to softwareversion	-->	V6.0
+// ***		change-date		:	XX.XX.XXXX
+// ***		mofified by		:	MALE
+// ***		changes/description	:	...
+//END 
+
+//FUNC VARIABLES
+// *****************************************************************************************
+// *************************************** VARIABLES ***************************************
+// *****************************************************************************************
+
+//******************************************************************************CAN  1112*** 
+
+ACTOR CAN2A0 = DIGOUT (personality= "CAN1112DigOut0") 
+//ACTOR CAN2A0 = BIMOT (personality= "CAN1112DcMotor0")
+ACTOR CAN2A1 = DIGOUT (personality= "CAN1112DigOut1") 
+//ACTOR CAN2A1 = BIMOT (personality= "CAN1112DcMotor1") 
+ACTOR CAN2A2 = DIGOUT (personality= "CAN1112DigOut2")
+ACTOR CAN2A3 = DIGOUT (personality= "CAN1112DigOut3")
+ACTOR CAN2A4 = DIGOUT (personality= "CAN1112DigOut4") 
+ACTOR CAN2A5 = DIGOUT (personality= "CAN1112DigOut5")  
+ACTOR CAN2A6 = DIGOUT (personality= "CAN1112DigOut6") 
+//ACTOR CAN2A6 = BIMOT (personality= "CAN1112DcMotor2") 
+ACTOR CAN2A7 = DIGOUT (personality= "CAN1112DigOut7") 
+//ACTOR CAN2A7 = BIMOT (personality= "CAN1112DcMotor3")
+ACTOR CAN2E00 = DIGIN (personality= "CAN1112DigIn0")
+ACTOR CAN2E01 = DIGIN (personality= "CAN1112DigIn1")
+ACTOR CAN2E02 = DIGIN (personality= "CAN1112DigIn2")  
+ACTOR CAN2E03 = DIGIN (personality= "CAN1112DigIn3")  
+ACTOR CAN2E04 = DIGIN (personality= "CAN1112DigIn4")
+ACTOR CAN2E05 = DIGIN (personality= "CAN1112DigIn5")  
+ACTOR CAN2E06 = DIGIN (personality= "CAN1112DigIn6")
+ACTOR CAN2E07 = DIGIN (personality= "CAN1112DigIn7")
+ACTOR CAN2E08 = DIGIN (personality= "CAN1112DigIn8")  
+ACTOR CAN2E09 = DIGIN (personality= "CAN1112DigIn9") 
+ACTOR CAN2E10 = DIGIN (personality= "CAN1112DigIn10")
+ACTOR CAN2E11 = DIGIN (personality= "CAN1112DigIn11")
+ACTOR CAN2E12 = DIGIN (personality= "CAN1112DigIn12")
+ACTOR CAN2E13 = DIGIN (personality= "CAN1112DigIn13") 
+ACTOR CAN2E14 = DIGIN (personality= "CAN1112DigIn14")
+ACTOR CAN2E15 = DIGIN (personality= "CAN1112DigIn15")
+ACTOR CAN2AN0 = ANALOG (personality= "CAN1112Analog0")
+ACTOR CAN2AN1 = ANALOG (personality= "CAN1112Analog1")
+//ACTOR CAN2SM0 = LINSMI (personality= "CAN1112SteppingMotor0", speed = 200mm/s, accel=7000mm/s2, scale=5000um/100step) //Motordaten aus Maschinendaten verwenden
+//ACTOR CAN2SM1 = LINSMI (personality= "CAN1112SteppingMotor1", speed = 200mm/s, accel=7000mm/s2, scale=5000um/100step) //Motordaten aus Maschinendaten verwenden
+
+//**************************************************************************************TEB1
+
+ACTOR theta_left = ROTETEL (personality= "servo_axis_4",  speed = 5400?s, accel = 360000?s2, jerktime = 25ms)//, maxpos = 210? minpos = -210? scale = 360000000)  		//Motor 52X221; Encoder 52X222 ;DI/DO 52X223 
+ACTOR Z_left = LINETEL (personality= "servo_axis_6", speed = 1000mm/s, accel = 30000mm/s2, jerktime = 20ms)//Motor 52X321; Encoder 52X322;DI/DO 52X323 **48VOLT!** 
+
+//**********************************************************************Variablen definieren 
+
+SCALAR fehler,value1, value2, result , menu
+SCALAR k85fzl, m67fzl,k85fzr, m67fzr, k85ftl, m67ftl, k85ftr, m67ftr, k85fz, k85ft, m67fz, m67ft
+LENGTH posol, posol1, posul, posul1, posz, posor, posur
+ANGLE tro, tru, pos, tpos, tposl, tposr
+SCALAR pfz, pft, d
+SCALAR k212fz, k212ft
+ACCEL ac_fz,  mk212fz, dac_fz, aco_fz
+ROTACCEL mk212ft,  ac_ft, dac_ft, aco_ft, dummy0, dummy_mw
+SCALAR ffz, ft, var, i, g, m31l, m31lmax, m31r, m31rmax, mw_m67tl, mw_m67tr, mw_m67zl, mw_m67zr, w, m67fzlo, m67fzro, m67ftro, m67ftlo
+SCALAR nm67fzl, nm67fzr, nm67ftr, nm67ftl, e, m43, m43o, m43min
+ACCEL nac_fz,  mw_ac_fz,  ac_fz_o
+ROTACCEL nac_ft, mw_ac_ft,ac_ft_o
+CLOCK uhr1 		//variable f黵 zeitmessung
+TIME diff, diff1, runhour		//variablen zum zeiten vergleichen
+SCALAR dummyzaehler
+SCALAR mw_ac_fz_scal, mw_ac_ft_scal //?????
+SCALAR UPH
+//**********************************************************************Variables for sub-routine indexparameter 
+
+SCALAR indexcounter, slope, thetamininc, thetamaxinc, thetaindexpre, thetaindexpost, rotfactor, bug, thetaminlog, thetamaxlog,
+ warning_variable, warning_z, warning_theta, theo_curr_z, real_curr_z, theo_curr_theta, real_curr_theta, delay_count, i2t_theta, i2t_zaxis
+ANGLE thetamin, thetamax, dist_to_hardstop_pos, dist_to_hardstop_neg, tlo, tlu, otlo, otlu, loggingfactor, tlo_min, tlo_max, tlo_pre, tlu_pre, tlo_post, tlu_post
+TIME delay_var
+// Variables for sub-routine z_movement_eval
+
+SCALAR zminlog, zmaxlog, whole_bug, linearloggingfactor, zminincremental , zmaxincremental
+LENGTH zmin, zmax, zfactor, zmininc_sls, zmaxinc_sls
+
+//Additional variables for theta axis
+
+SCALAR voltage_theta
+
+//Additional variables for test procedure theta
+
+SCALAR thetamininc_test, thetamaxinc_test, thetaindexpre_test, scale_factor, thetaminnanoturn, thetamaxnanoturn, initial_bug, 
+serial_number, thetamininc_sls, thetamaxinc_sls, zmininc, zmaxinc, brake_log, dist_to_hardstop_neg_small, dist_to_hardstop_neg_large, eval_bug_all
+
+//END
+//FUNC SPEC INITIALIZE
+PROC spec
+	rotfactor = 355.5555555556
+	loggingfactor = 1000000
+	linearloggingfactor = 1000000000
+	zfactor = 0.00000244141mm
+	dist_to_hardstop_pos = 20?	dist_to_hardstop_neg_small = 15
+	dist_to_hardstop_neg_large = 40
+	tlo_min = -150?	tlo_max = 150?	
+ENDPROC
+//END
+//FUNC SERVO ADJUSTMENT
+PROC servo_adjusting 
+	log "------------------------------------------\n\n"
+	log "Servo adjusting"
+	log "\n------------------------------------------"
+    
+//********************************** Servo setup theta axis *******************************
+
+	log "------------------------------------------\n\n"
+	log "Voltage set"
+	log "\n------------------------------------------"
+	theta_left.ETLcmd "K147" = 14000
+	theta_left.ETLcmd "K146" = 15000
+ 
+	theta_left.sav 2
+	theta_left.rsd
+	log "------------------------------------------\n\n"
+	log "Voltage set done!"
+	log "\n------------------------------------------"
+	input "After confirming the theta axis will perform a automatic setup!\n\nThis can take a while!\n\n\t!!! ATTENTION !!!\n\n\t!!! Axis is moving !!!\n\n\t!!! Danger of squeezing !!!\n""Danger of squeezing"
+	theta_left.initialSetup
+	theta_left.pwr 1
+        theta_left.ind
+	log "The theta axis will perform a automatic hardstop readout!\n\n!!! ATTENTION !!!\n\nAxis is moving!\n\n!!! Danger of squeezing !!!\n\nDanger of squeezing!"
+	theta_left.sls thetamininc_sls, thetamaxinc_sls
+	theta_left.ETLcmd "M36" : thetamininc
+    theta_left.ETLcmd "M37" : thetamaxinc
+	theta_left.ind
+	log "Thetaminimum SLS value:\t",thetamininc_sls,"Thetamaximum SLS value:\t",thetamaxinc_sls
+	log "Thetaminimum in [inc]:\t",thetamininc,"Thetamaximum in [inc]:\t",thetamaxinc
+	log "------------------------------------------\n\n"
+	log "Servo adjusting theta finished"
+	log "\n------------------------------------------"
+//************************************ Servo setup Z axis *********************************
+	input "After confirming the Z axis will perform a automatic setup!\n\nThis can take a while!\n\n\t!!! ATTENTION !!!\n\n\t!!! Axis is moving !!!\n\n\t!!! Danger of squeezing !!!\n""Danger of squeezing"
+	Z_left.initialSetup
+	Z_left.pwr 1
+	Z_left.ind
+	log "The Z axis will perform a automatic hardstop readout!\n\n!!! ATTENTION !!!\n\nAxis is moving!\n\n!!! Danger of squeezing !!!\n\nDanger of squeezing!"
+	Z_left.sls zmininc_sls, zmaxinc_sls
+		Z_left.ETLcmd "M36" : zmininc
+		Z_left.ETLcmd "M37" : zmaxinc
+	Z_left.ind
+	log "Z-axis minimum SLS value:\t",zmininc_sls,"Z-axis maximum SLS value:\t",zmaxinc_sls
+	log "Z-axis minimum in [inc]:\t",zmininc,"Z-axis maximum in [inc]:\t",zmaxinc
+	log "------------------------------------------\n\n"
+	log "Servo adjusting Z-axis finished"
+	log "\n\n"
+	log "Servo adjustment finished"
+	log "\n-------------------------------------------"
+ENDPROC
+//END
+//FUNC IBN BOTH
+PROC IBN_both  
+
+   call servo_adjusting
+    log "------------------------------------------\n\n"
+    log "Initial operation axis theta and Z  was successful!"
+    log "\n------------------------------------------"
+ENDPROC
+//END
+//FUNC INDEX DISTANCE
+PROC indexdistance
+	bug = 0
+	WHILE bug == 0 DO
+		call IBN_both
+		thetamin = thetamininc / rotfactor * 1?		thetamax = thetamaxinc / rotfactor * 1?		thetaminlog = thetamin / loggingfactor
+		thetamaxlog = thetamax / loggingfactor
+		
+		tlo_pre = thetamin
+		tlo = tlo_pre
+		tlu_pre = thetamax
+		tlu = tlu_pre
+		log "thetamin = tlo[deg]\t",thetaminlog%5,"\tthetamax = tlu [deg]\t",thetamaxlog%5
+				
+		IF abs(thetaminlog) <= dist_to_hardstop_neg_large THEN
+			IF abs(thetaminlog) >= dist_to_hardstop_neg_small THEN
+				log "The index position is OK!"
+				bug = 1
+			ELSE
+				input "The index mark position is NOT OK!\nDistance to positive hard stop is to small!\nReadjust the assembly and use the jig provided to adjust the index mark!"
+			ENDIF
+			ELSE
+			input "The index mark position is NOT OK!\nDistance to positive hard stop is to large!\nReadjust the assembly and use the jig provided to adjust the index mark!"
+		ENDIF
+	ENDWHILE
+	log "--------------------------------------------------------------------"
+    log "--------------Theta hardstops PREVIOUS to longterm test-------------"
+	log "Theta upper stop:\t\t", (tlo/loggingfactor)%3 (nounit), "\tdegree\nTheta lower stop:\t\t", (tlu/loggingfactor)%3 (nounit),"\tdegree"
+	log "\n\n\n"
+ENDPROC
+//END
+//FUNC INDEX PARAMETER LONG TERM
+PROC  indexparameter_after_longterm
+    
+    theta_left.sls thetamininc_sls, thetamaxinc_sls
+        theta_left.ETLcmd "M36" : thetamininc
+        theta_left.ETLcmd "M37" : thetamaxinc
+    delay 500ms
+
+	thetamin = thetamininc / rotfactor * 1?	thetamax = thetamaxinc / rotfactor * 1?   	thetaminlog = thetamin / loggingfactor
+	thetamaxlog = thetamax / loggingfactor
+	tlo_post = thetamin
+	tlu_post = thetamax
+	
+	log "--------------------------------------------------------------------"
+    log "--------------Theta hardstops AFTER longterm test-------------"
+	log "Theta upper stop:\t\t", (tlo_post)%3 (nounit), "\tdegree\nTheta lower stop:\t\t", (tlu_post)%3 (nounit),"\tdegree"
+	
+ENDPROC
+//END
+//FUNC Z MOVEMENT FOR UPPER & LOWER LIMIT
+PROC z_movement_eval
+
+	Z_left.ETLcmd "M36" : zmininc //minimum position z axis
+	Z_left.ETLcmd "M37" : zmaxinc //maximum position z axis
+    
+	zmin = zmininc * zfactor
+	zmax = zmaxinc * zfactor
+	zminlog = zmin / 1mm
+	zmaxlog = zmax / 1mm
+	log "Z-axis minimum position\t",zminlog%9,"mm\tZ-axis maximum position\t", zmaxlog%9,"mm"
+    
+	IF abs(zmin) > abs(zmax) THEN
+		whole_bug = 0
+		log "Z-axis scale is mounted correctly!"
+	ELSE
+		whole_bug = 1
+		log "Z-axis scale is defective, wrong mounted or dirty!"
+	ENDIF	
+	
+	log "For longtermtest the z-axis movements will be reduced to 93% of it's absolute value!"
+	zmin = zmin * 0.93
+	zmax = zmax * 0.93
+	
+ENDPROC
+//END
+//FUNC PNEUMATIC CHECK
+PROC PNEcheck  
+
+	value1 = 0
+	value2 = 0
+	result = 0 
+	menu =0 
+	
+	input "Pneumatic check " "FlipUnit left"
+	input "Mount the testtool to the tool retainer" 
+	WHILE menu != 1 DO  
+		CAN2A1.off
+		CAN2A0.off
+		input "No media should be available on the tool opening\n YES -> input 1:\n NO  -> input 0: ":"":menu 
+	ENDWHILE 
+	 
+	menu=0 
+	WHILE menu != 1 DO  
+		CAN2A1.on 
+		input "Compressed air should be available on the tool opening\n YES -> input 1:\n NO  -> input 0: ":"":menu 
+	ENDWHILE  
+	
+	menu=0 
+	WHILE menu != 1 DO 
+		CAN2A1.off
+		CAN2A0.on 
+		input "Vacuum should be available on the tool opening\n YES -> input 1:\n NO  -> input 0: ":"":menu 
+	ENDWHILE   
+	
+	log " Flowsensor Check and leaktest"
+	result = 500
+	WHILE result < 540 DO 
+		CAN2A1.off
+		CAN2A0.on 
+		input "Cover the tool opening!" 
+		delay 5s
+		CAN2AN0.getVal value2
+		input "uncover the tool opening"
+		delay 5s
+		CAN2AN0.getVal value1
+		log "Tool covered\t--> " , value2
+		log "Tool uncovered\t--> " , value1
+		result= value1 - value2
+		log "Difference -->>  ",result, "  <<--"
+		CAN2A1.off
+		CAN2A0.off
+		IF result > 540 	THEN
+			log "Flowsensor Check and leaktest are OK"
+		ELSE
+			log " Flowsensor 65B05 ist defect or wrong wired or system is not sealed"
+		ENDIF 
+	ENDWHILE
+	input "Remove the testtool from the tool retainer" 
+	
+    log "------------------------------------------\n\n"
+    log "--------------PNEUMATIC CHECK-------------\n\n"
+
+	log "Tool covered: \t-->\t" , value2
+	log "Tool uncovered: \t-->\t" , value1
+	result= value1 - value2
+	log "Difference: \t-->\t",result
+	IF result > 540 THEN
+		log "Flowsensor Check and leaktest are OK"
+		eval_bug_all = 0
+	ELSE
+		eval_bug_all = 1
+	ENDIF 
+    log "\n---------------------------------------------"
+	
+ENDPROC 
+//END
+//FUNC INITIALIZE PARAMETER FOR FLIP
+PROC init_var_Flip
+	start uhr1
+	stop uhr1 :diff
+	diff1=diff+runhour //standard 120min
+	diff=1s
+	posol= zmin //20mm 	//flipper z Position oben
+	posul= zmax //-20mm 	//-26//flipper z position unten
+	tlo=tlo - 0.2?	tlu=tlu + 0.2?
+	ffz=1.2068009608244*0.00001
+	ft=2.649053233507*0.000001
+	pfz=5	// faktoren f黵 regler - reduced factor from 10 to 5 regarding to assembly changes MALE 19.08.2014
+	pft=1	// faktoren f黵 regler - reduced factor from 20 to  regarding to assembly changes MALE 19.08.2014
+
+	mk212fz= 35000mm/s2 //*1000		//max. Beschleunigungsvaluee removed factor 1000 regarding to assembly changes MALE 19.08.2014
+	mk212ft= 360000?s2 //*1000		//max. Beschleunigungsvaluee removed factor 1000 regarding to assembly changes MALE 19.08.2014
+	var=0.05 
+	m67fzlo=0
+	m67ftlo=0
+	ac_ft_o=0 ?s2
+	ac_fz_o=0 m/s2
+//END
+//FUNC FIND MINIMUM
+PROC findmin
+	e=0
+	Z_left.ETLcmd "M43" : m43
+	m43min=m43*1.1
+	WHILE e < 3000 DO
+		Z_left.ETLcmd "M43" : m43
+		IF m43 < m43min THEN
+			m43min = m43
+		ENDIF
+		e=e+1
+		delay 2ms
+	ENDWHILE
+	m43min= sqrt(m43min)/(2048*0.74) //Umrechnung auf Volt
+//END
+//FUNC Z AXIS ENCODER CHECK
+PROC encodercheck_Z
+
+	Z_left.goPos posol
+	PAR
+		call findmin
+		Z_left.goPos posul (speed=5mm/s)
+	ENDPAR
+	log "--------------------------------------------------------------------"
+	IF m43min <= 0.80 THEN
+		log "Smallest Z-encoder voltage:\t", m43min %3, "V and NOT OK!"
+		eval_bug_all = 1
+	ENDIF
+	IF m43min > 0.80 THEN
+		log "Smallest Z-encoder voltage:\t", m43min %3, "V and OK!"
+		eval_bug_all = 0
+	ENDIF
+	log "--------------------------------------------------------------------"
+ENDPROC
+//END
+//FUNC ORIGINAL I2T CHECK
+PROC warning_check
+
+	warning_variable = 0
+	warning_z = 0  //M66 is the register for the warning message
+	warning_theta = 0 //M66 is the register for the warning message
+	
+	i2t_theta = 0 //M67 is the register for the i2t integration
+	i2t_zaxis = 0 //M67 is the register for the i2t integration
+
+	Z_left.ETLcmd "M66" : warning_z
+	theta_left.ETLcmd "M66" : warning_theta
+
+	Z_left.ETLcmd "MF30" : theo_curr_z
+	Z_left.ETLcmd "MF31" : real_curr_z
+
+	theo_curr_z = theo_curr_z/2621
+	real_curr_z = real_curr_z/2621
+
+	theta_left.ETLcmd "MF30" : theo_curr_theta
+	theta_left.ETLcmd "MF31" : real_curr_theta
+
+	theo_curr_theta = theo_curr_theta/2621
+	real_curr_theta = real_curr_theta/2621
+
+	Z_left.ETLcmd "MF67" : i2t_zaxis
+	theta_left.ETLcmd "MF67" : i2t_theta
+
+	IF i2t_zaxis > 500000 | i2t_theta > 500000 THEN // 10000 ; 5000
+		log "",theo_curr_z%4,";\t\t",real_curr_z%4,";\t",theo_curr_theta%4,";\t\t\t",real_curr_theta%4,";\t\t",i2t_zaxis%4,";\t\t",i2t_theta%4
+	ENDIF
+
+	IF warning_z != 0 | warning_theta != 0 THEN
+		delay_var = delay_var + 10ms
+		delay_count = delay_count + 1
+	ENDIF
+	IF delay_count > 10 THEN
+		IF warning_z != 0 THEN 
+			warning_variable = 1
+			log "Z-axis is in warning mode!\nThe longterm test will be aborted!\nCheck the assembly and restart the longterm test afterwards!"
+		ENDIF
+		IF warning_theta != 0 THEN
+			warning_variable = 1
+			log "Theta-axis is in warning mode!\nThe longterm test will be aborted!\nCheck the assembly and restart the longterm test afterwards!"
+		ENDIF	
+	ENDIF
+ENDPROC
+//END
+//FUNC I2T AUTO ADJUSTMENT
+PROC I2T_FLIP
+	warning_variable = 0
+	warning_z_left = 0
+	warning_theta_left = 0
+
+	//IF choice == 1 THEN
+		PAR
+			flz_left.ETLcmd "MF67":mf67_flz_left
+			flt_left.ETLcmd "MF67":mf67_flt_left
+			flz_left.ETLcmd "M66":warning_z_left
+			flt_left.ETLcmd "M66":warning_theta_left
+		ENDPAR
+		PAR
+			mf67_flz = mf67_flz_left
+			mf67_flt = mf67_flt_left
+		ENDPAR
+	//ENDIF
+	//If we have a warning message, increase the delay
+	IF warning_z_left != 0 | warning_theta_left != 0 THEN
+		delay_var = delay_var + 10ms
+		delay_count = delay_count + 1
+	ENDIF
+	//IF choice == 1 THEN
+	//If the warning message disappear, decrease the delay
+		IF delay_count > 1 THEN
+			IF warning_z_left == 0 & warning_theta_left == 0 THEN
+				delay_var = delay_var - 10ms
+				delay_count = delay_count - 1
+			ENDIF
+		ENDIF
+	//ENDIF
+	//If the warning message keeps pop up and our delay cannot resolve the problem, terminate the test.
+	IF delay_count > 50 THEN
+		IF warning_z_left != 0 THEN
+			warning_variable = 1
+			log "Z-axis left is in warning mode!"
+		ENDIF
+		IF warning_theta_left != 0 THEN
+			warning_variable = 1
+			log "Theta-axis left is in warning mode!"
+		ENDIF
+	ENDIF
+	//IF choice == 1 THEN
+		mcall "icmWriteToFile","/sd0/prot/Firetest_Flipunit_left.txt",run_left,";",choice,";",mf67_flz_left,";",kf85_flz_left,";",mf67_flt_left,";",kf85_flt_left,";",dauer,";",delay_var,";",delay_count,";",warning_z_left,";",warning_theta_left,"\n"
+		run_left = run_left + 1
+	//ENDIF
+	stop uhr:dauer2
+	log "Delay: ",delay_var," Delay counter: ",delay_count
+	log "Duration: ",dauer2/1000(nounit),"s"
+ENDPROC
+//END
+
+//FUNC MOVE FLIPPER
+PROC moving_Flip
+delay_var = 30ms
+delay_count = 1
+
+d=0
+warning_variable = 0
+
+	theta_left.pwr 1
+    theta_left.ETLcmd "K363" = 0
+    delay 500ms
+    theta_left.ETLcmd "K171" = 3
+   delay 2000ms
+   
+	WHILE d == 0 DO
+		start uhr1
+		stop uhr1 : diff
+
+		log "-------------- Start long term test ---------------" (timestamp)
+		log "long term test in progress..."
+
+		log "theoretical current z;\treal current z;\ttheoretical current theta;\treal current theta;\ti2t value Z-axis;\ti2t value theta"
+		WHILE (diff<diff1) & (warning_variable == 0) DO
+			Z_left.goPos posol (accel = 30000mm/s2)
+			theta_left.ETLcmd "KF60" = 6553
+			theta_left.goPos tlo
+			theta_left.ETLcmd "KF60" = 1310
+			delay delay_var
+			Z_left.goPos posul (accel = 30000mm/s2)
+			theta_left.ETLcmd "KF60" = 6553
+			theta_left.goPos tlu
+			theta_left.ETLcmd "KF60" = 1310
+			UPH = UPH +1
+			delay delay_var
+			call I2T_FLIP     //*******************************************I2T FUNCTION CALLED
+			stop uhr1 : diff
+		ENDWHILE
+		log "-------------- Stop-long term test ----------------" (timestamp) 
+		log ""
+		IF diff >= diff1 THEN
+			log "Longterm test finished!"
+			d = 1
+			log "Movement delay required:\t", delay_var
+			eval_bug_all = 0
+		ELSE
+			input "The longterm test was aborted!\nZ-axis warning or theta-axis warning!"
+			d = 0
+			warning_variable = 0
+			log "Movement delay required:\t", delay_var
+			delay_var = 30ms
+			delay_count = 1
+			call init_var_Flip
+			eval_bug_all = 1
+		ENDIF
+	ENDWHILE
+
+    theta_left.goPos tlo (feedrate = 10%)
+    Z_left.goPos posul (feedrate = 10%)
+    delay 1000ms
+    theta_left.ind
+ENDPROC
+//END
+//FUNC INDEX SHIFT
+PROC index_shift
+
+	tlo=tlo-otlo
+	tlu=tlu-otlu
+
+	log "--------------------------------------------------------------------"
+	IF abs (tlo) <= 100m?THEN
+		log "Theta upper stop is OK (not moved)\t(absolut deviation: ",(tlo/1000) (nounit),"m?"
+	ELSE
+		log "Theta upper stop is NOT OK (moved)\t(absolut deviation: ", (tlo/1000) (nounit),"m?" 
+	ENDIF 
+
+	IF abs (tlu) <= 100m?THEN
+		log "Theta lower stop is OK (not moved)\t(absolut deviation: ",(tlu/1000) (nounit),"m?"
+	ELSE
+		log "Theta lower stop is NOT OK (moved)\t(absolut deviation: ",(tlu/1000) (nounit),"m?" 
+	ENDIF
+
+ENDPROC
+//END
+
+
+
+
+//***********************************************LOGIC FOR THE MAIN***********************************************
+//CALL HEADER
+//CALL SPEC INITIALIZE
+//CALL PNEUMATIC CHECK (MUTED)
+//CALL INDEX DISTANCE 					 		 ---- To find theta upper & lower position
+//CALL Z MOVEMENT FOR UPPER & LOWER LIMIT 		 ---- Upper & lower limit of z-axis
+//call INITIALIZE PARAMETER FOR FLIP			 ---- Parameter initialization	
+//CALL Z AXIS ENCODER CHECK						 ---- Check the Z encoder before the test
+//CALL MOVE FLIPPER								 ---- I2T function is called, once error code appears, terminate the test
+//CALL INDEX PARAMETER LONG TERM				 ---- Log the theta parameter after the test
+//CALL Z AXIS ENCODER CHECK						 ---- Check the Z encoder after the test
+
+//FUNC MAIN
+PROC main
+	call programm_header
+	log "\n"
+	log "*******************************************************"
+	log "***               SOFTWARE INFORMATION	            ***"
+	log "*******************************************************"
+	log "*                                                     *"
+//	log "*  assembly description:\t ",program_for
+	log "*  assembly nr.\t\t:\t",assembly,"-0",assembly_2," 	      *"
+	log "*  creation date\t:\t",creation_date %2,".",creation_year," 	      *"
+	log "*  release date\t\t:\t",release_date %2,".",release_year," 	      *"
+//	log "*  made by:\t ",made_by
+	log "*                                                     *"
+	log "*  softwareversion\t:\tVersion ",softwareversion %1," 	      *"
+	log "*                                                     *"
+	log "*******************************************************"
+	log "\nLog:\t Load specificationdate on this assembly-check"
+	call spec
+	log "\n\nStart assembly check"
+
+//	********************  START PROGRAMMING UNDER THIS LINE!!!  ************************
+
+	serial_number = 0
+	eval_bug_all = 0
+	input " Flip unit left check" 
+	
+	WHILE serial_number == 0 DO 
+		input "Serial number: ":"": serial_number 
+	ENDWHILE
+    
+	dummyzaehler = 0
+	
+	whole_bug = 0
+ 
+	//call PNEcheck 
+    
+ 	call indexdistance
+	call z_movement_eval
+	
+	IF whole_bug == 0 THEN
+		log "\n\n\n "
+		log "**************** Start qualification **************" (timestamp)
+		log "--------------------------------------------------------------------"
+		log "Theta upper stop:\t\t", (tlo_pre/1000000)%3 (nounit), "\tdegree\nTheta lower stop:\t\t", (tlu_pre/1000000)%3 (nounit),"\tdegree"
+		otlo=tlo
+		otlu=tlu
+		
+		input "run time (min)":"":runhour
+		runhour = runhour*1000*60
+		call init_var_Flip
+		
+		call encodercheck_Z
+		
+		call moving_Flip 
+		
+		call indexparameter_after_longterm
+		tlo=(tlo_pre - tlo_post)
+		tlu=(tlo_pre - tlo_post)
+		
+		log"\ntlo;\t",thetaminlog%6(nounit),"\tdegree\ttlu;\t",thetamaxlog%6(nounit),"\tdegree"
+		log "\n--------------------------------------------------------------------"
+		IF abs (tlo) <= 100m?THEN
+			log "Theta upper stop is OK (not moved)\t(absolut deviation: ",abs(tlo/1000) (nounit),"\tmillidegree)"
+		ELSE
+			log "Theta upper stop is NOT OK (moved)\t(absolut deviation: ", abs(tlo/1000) (nounit),"\tmillidegree)" 
+		ENDIF 
+		
+		IF abs (tlu) <= 100m?THEN
+			log "Theta lower stop is OK (not moved)\t(absolut deviation: ",abs(tlu/1000) (nounit),"\tmillidegree)"
+		ELSE
+			log "Theta lower stop is NOT OK (moved)\t(absolut deviation: ",abs(tlu/1000) (nounit),"\tmillidegree)" 
+		ENDIF
+		
+		IF abs(tlo) <= 100m?& abs(tlo) <= 100m?THEN
+			eval_bug_all = 0
+		ELSE
+			eval_bug_all = 1
+		ENDIF
+		
+		call encodercheck_Z
+
+		log "\n------------------   PNEUMATIC   CHECK   ---------------------------"
+		log "Tool covered: \t\t-->\t" , value2
+		log "Tool uncovered: \t-->\t" , value1
+		result= value1 - value2
+		log "Difference: \t\t-->\t",result
+		
+		IF result > 540 THEN
+			log "Flowsensor Check and leaktest are OK"
+		ENDIF 
+		log "--------------------------------------------------------------------"
+		log ""
+		log "**************** End of qualification *************" (timestamp)
+        theta_left.pwr 0
+        Z_left.pwr 0
+	ELSE
+		input "Assembly test failed!\nCheck the z-axis scale!"
+	ENDIF	
+	
+	IF eval_bug_all == 0 THEN
+		log "------------------------------------------"
+		log "Data see logfile" 
+		log "Flip unit left test finished --> OK" 
+		log "Mainprogram Finish"
+		log "------------------------------------------"
+		messagebox "Fire Test Result":"S/N: " serial_number, "UPH for the flipper:" UPH,
+		input "!!!Please rename the both txt file with S/N:\n\nFiretest_Flipunit_left.txt & Firetest_Flipunit_right.txt\n\nunder path: /sd0/prot/ \n\nOtherwise the file will be over-written, data is lost!!!"
+	ELSE
+		input "The flipper didn't pass the capability test!\nCheck the log file!\n\nTEST NOT OK!"
+	ENDIF
+	
+ENDPROC
+//END

@@ -1,0 +1,247 @@
+//Created by Mike Yun 2017/Nov/8, Version 1.0
+//Auto focus the image.
+//upper & lower limit are programmed in so no more servo error when target position is out of range
+//Can be used on MCC & FCC machine
+
+
+//**********************************************************************************************************************
+//----------------------------------------------------------------------------------------------------------------ACTORS
+//**********************************************************************************************************************
+ACTOR Gantry_left_xy = AXSYSTEM (personality="MaximXYLeft", trafo="trafoA0G0XYLeft")
+ACTOR Gantry_left_z = LINETEL (personality = "axisZLeft")
+ACTOR Tool_bank_SM = ROTSMI (personality = "SteppingMotorPpToolBenchZ")
+ACTOR cam = CAMERA (name = "ScLeft")
+//**********************************************************************************************************************
+//------------------------------------------------------------------------------------------------------------PARAMETERS
+//**********************************************************************************************************************
+//--------------------------------------------------------------------------------------------------------Axis parameter
+LENGTH2D ppxy
+LENGTH2D left_mark, left_corner, right_mark, right_corner, ofst_left, ofst_right
+LENGTH left_z, right_z, z_initial //z_initial and ppxy are used to record the initial position
+//-------------------------------------------------------------------------------------------------------Focus parameter
+SCALAR old_image, new_image, delta, camflag,check, checkflag, continue
+LENGTH constant, ofst, z0, ztarget,z1, upper_limit, lower_limit
+//--------------------------------------------------------------------------------------------------Common use parameter
+SCALAR convert_factor
+ANGLE Tool_Change_Pos
+//**********************************************************************************************************************
+//FUNC - Parameter Initialize
+PROC ini_para
+
+	convert_factor = 1000000 //from nm to mm
+	Tool_Change_Pos = 0°
+	
+ENDPROC
+//END
+//**********************************************************************************************************************
+//FUNC - Focus Initialize
+PROC ini_focus
+
+	continue = 1
+	constant = 2 mm //constant step to move down during auto focus
+	ofst = 0 mm
+	old_image = 0
+	new_image = 0
+	delta = 0
+	camflag = 0
+	z0 = 0 mm
+	z1 = 0 mm
+	ztarget = 0 mm
+	check = 0
+	checkflag = 0
+	//system z reading = - manipulator reading + 22.677 mm
+	//system z upper limit -5mm, manipulator reading 27.677
+	//system z lower limit 43mm, manipulator reading -20.322
+	//when camera is focus on G0 mark, manipulator reading 0
+	upper_limit = -5 mm
+	lower_limit = 43 mm
+
+ENDPROC
+//END
+//**********************************************************************************************************************
+//FUNC - Auto focus
+PROC poscheck //this function is to make sure our camera is always above the focus point
+	WHILE checkflag ==0 DO
+		old_image = 0
+		new_image = 0
+		log "PosCheck: current position = ",z0
+		cam.getFocusVal old_image (snap)
+		z1 = z0 + 2*constant //need to check with lower limit
+		IF z1 > lower_limit THEN
+		log "Exceed lower limit. Now moves to: ", z1
+		z1 = z1 - 11*constant
+		ENDIF
+		log "PosCheck: test position = ", z1
+		Gantry_left_z.goPos z1
+		cam.getFocusVal new_image (snap)
+		check = new_image - old_image
+		log"PosCheck: value =",check
+		IF check < 0 THEN // if check < 0, which means below the real focus point, should move upward
+			z0 = z0-6*constant
+			log "PosCheck z0 = ", z0
+			//need to compare the uppler limit -5mm			
+			IF z0 < upper_limit THEN
+			z0 = -4 mm
+			log "Exceed upper limit. z0 changed to ", z0
+			ENDIF
+			log "PosCheck: next run start position = ",z0
+			Gantry_left_z.goPos z0
+		ELSE // if check > 0, which means above the real focus point
+		checkflag = 1
+		z0 = z1
+		ENDIF
+	ENDWHILE
+ENDPROC
+//END
+//**********************************************************************************************************************
+//FUNC - Search
+PROC focusjudge //this function is to move to the real focus point with step size : ofst
+	WHILE camflag == 0 DO
+		cam.getFocusVal new_image (snap)
+		delta = new_image - old_image
+		log "#####################Focus: delta = ",delta
+		log "new_image = ", new_image, "    old_image = ", old_image
+		IF delta > 0 THEN       //move down
+			ztarget = z0
+			z0 = z0 + ofst
+			log "step size: ", ofst
+			IF z0 > lower_limit THEN
+			log "Exceed lower limit. Now moves to: ", z0
+			z0 = z0 - 11*constant
+			ENDIF
+			log "Focus: now move down to:",z0
+			Gantry_left_z.goPos z0
+			old_image = new_image			//pass the value
+		ENDIF
+		
+		IF delta == 0 THEN //image quality not improved, need to move up
+			IF z0 > 22 mm THEN //camera is at the lower position of z, thus just move it above the focus point.
+				z0 = 20 mm
+				Gantry_left_z.goPos z0
+			ENDIF
+		
+			IF z0 < 0 mm THEN //camera is at the upper position of z, thus just move it near the upper limit.
+				z0 = -4 mm
+				Gantry_left_z.goPos z0
+			ENDIF
+		log "!!!!z0 = ", z0
+		old_image = 0
+		ENDIF
+	
+		IF delta < 0 THEN
+			camflag = 1  //need to use smaller step to further adjust
+		ENDIF
+	
+	ENDWHILE
+ENDPROC
+//END
+//**********************************************************************************************************************
+//FUNC - Auto Focus Main function
+PROC getthefocus
+	continue = 1
+	WHILE continue ==1 DO
+		call ini_focus
+		input "Adjust z, and set the direct light to 100%, ring light to 30%"
+		Gantry_left_z.getPos z0
+		call poscheck
+		old_image = 0
+		new_image = 0
+		ofst = constant    			//scale = 1
+		call focusjudge
+		//move back and use 1/10 scale
+		z0 = ztarget - ofst
+		Gantry_left_z.goPos z0				
+		old_image = 0
+		new_image = 0
+		camflag = 0					//initial the parameter for second loop
+		log "******1 round finish, now fine adjust starts"
+		ofst = constant*0.1			//scale = 1/10
+		call focusjudge
+		log "Focus finish, Z value is : ", ztarget
+		ztarget = ztarget + 0.1*constant
+		Gantry_left_z.goPos ztarget
+
+		IF input "Focus again?" != ok THEN
+			continue = 0
+		ENDIF
+	ENDWHILE
+ENDPROC
+//END
+//**********************************************************************************************************************
+//FUNC - Info Summary
+PROC info_summary
+	ofst_left = left_corner - left_mark
+	ofst_right = right_corner - right_mark
+	//system z reading = - manipulator reading + 22.677 mm
+	//transform to manipulator z
+	left_z = 22.677mm - left_z
+	right_z = 22.677mm - right_z
+	
+	//convert all the parameters
+	left_corner.x = left_corner.x /convert_factor
+	left_corner.y = left_corner.y /convert_factor
+	left_z = left_z / convert_factor
+	right_corner.x = right_corner.x /convert_factor
+	right_corner.y = right_corner.y /convert_factor
+	right_z = right_z / convert_factor
+	Tool_Change_Pos = Tool_Change_Pos / convert_factor
+	ofst_left.x = ofst_left.x / convert_factor
+	ofst_left.y = ofst_left.y / convert_factor
+	ofst_right.x = ofst_right.x / convert_factor
+	ofst_right.y = ofst_right.y / convert_factor
+	
+	messagebox "Summary": "Change position: " Tool_Change_Pos%3, "Calibration corner left x: " left_corner.x%3, "Calibration corner left y: " left_corner.y%3,"Calibration corner left z: " left_z%3, "Offset calibration mark left x: " ofst_left.x%3,  "Offset calibration mark left y: " ofst_left.y%3,"Calibration corner right x: " right_corner.x%3, "Calibration corner right y: " right_corner.y%3,"Calibration corner right z: " right_z%3, "Offset calibration mark right x: " ofst_right.x%3,  "Offset calibration mark right y: " ofst_right.y%3
+ENDPROC
+//END
+//**********************************************************************************************************************
+//FUNC - Main Function of this Script
+PROC home_gantry
+	Tool_bank_SM.home (feedrate = 10%)
+	delay 500ms
+	Gantry_left_xy.goPos ppxy (feedrate = 10%)	
+	Gantry_left_z.goPos z_initial (feedrate = 10%)	
+	input "Teaching finished."
+	log "Teaching finished."
+ENDPROC
+//END
+//**********************************************************************************************************************
+//FUNC - Main Function of this Script
+PROC Start_Teach
+	call ini_para
+	//record the initial position of xyz and after finish the process gantry can move back 
+	Gantry_left_xy.getPos ppxy
+	Gantry_left_z.getPos z_initial
+	input "Home the machine before teaching"
+	input "Please key in the position of tool bank:":"": Tool_Change_Pos
+	Tool_Change_Pos = Tool_Change_Pos*convert_factor //from micro-degree to degree
+	Tool_bank_SM.goPos Tool_Change_Pos //move out the tool bank
+	
+	//Left side teach start
+	
+	input "Open manipulator, move substrate camera above the upper left corner of tool bank\nClick OK when finish, auto focus will apply"
+	call getthefocus
+	input "Move the cross mark to the middle of the screen, click OK"
+	Gantry_left_xy.getPos left_mark
+	Gantry_left_z.getPos left_z
+	input "Move the lower left corner of the mark to the middle of the screen, click OK"
+	Gantry_left_xy.getPos left_corner
+	
+	//Left side teach finish
+	//Right side teach start
+	
+	input "Move substrate camera above the upper right corner of tool bank\nClick OK when finish, auto focus will apply"
+	call getthefocus
+	input "Move the cross mark to the middle of the screen, click OK"
+	Gantry_left_xy.getPos right_mark
+	Gantry_left_z.getPos right_z
+	input "Move the lower left corner of the mark to the middle of the screen, click OK"
+	Gantry_left_xy.getPos right_corner
+	
+	//Right side teach finish
+	//move back the gantry and give data summary
+	PAR
+	call info_summary //info summary will give all the data needed to fill in the parameter table
+	call home_gantry
+	ENDPAR
+ENDPROC
+//END

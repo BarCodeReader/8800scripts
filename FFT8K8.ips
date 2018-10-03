@@ -1,0 +1,31 @@
+input "I am PangHu, I am going to help you to solve the noise."
+input "Check the folder:\nips-HummingNoiseFFT-8k8\nis under\n/home/ses/sd0/datacon/data."
+input "Use manipulator to move the axis and reproduce the noise. \nStop the axis there and click OK, I will listen and analyse the noise."
+log "======axises are ready======"
+log "======Enabling OMA======"
+mcall "ETLgetObj", "axisX1Left", &value
+delay 1s
+log "======Calling ini File for Upper Gantry======"
+mcall "ETLdebugTraceStart", "/sd0/datacon/data/ips-HummingNoiseFFT-8k8/FFT-GantryX.ini" 
+delay 5s
+log "======Enabling OMA======"
+mcall "ETLgetObj", "axisWaferX" 
+delay 1s
+log "======Calling ini File for Wafer Table======"
+mcall "ETLdebugTraceStart", "/sd0/datacon/data/ips-HummingNoiseFFT-8k8/FFT-WaferTableandGantryY.ini"
+delay 5s
+
+log "======Listening Finished======"
+log "======Analysing...======"
+delay 1s
+log "======Trying to Plot Graph======"
+delay 1s
+mcall "startOctaveScript","/sd0/datacon/data/ips-HummingNoiseFFT-8k8/FFT8k8GantryX.m" 
+mcall "startOctaveScript","/sd0/datacon/data/ips-HummingNoiseFFT-8k8/FFT8k8WTandGantryY.m" 
+
+input "Please save the graph to folder:\n/sd0/datacon/data/ips-HummingNoiseFFT-8k8"
+input "Please send us the folder:\n ips-HummingNoiseFFT-8k8"
+input "Please say goodbye to PangHu"
+FFT-GantryX.ini 
+
+FFT-WaferTableandGantryY.ini 

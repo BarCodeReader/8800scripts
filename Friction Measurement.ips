@@ -1,0 +1,301 @@
+//FUNC PARAMETER SETTINGS
+SCALAR option,value, flag,loop,OTPloop, return, funcopt, FMloop, FMcheck,FMreturn, OTPcheck, OTPreturn, HMcheck, HMreturn, EScheck, ESreturn, TracingType
+//START & END-POSITIONS
+LENGTH ZLS, ZRS, WTXS, WTYS, FLZS_L, FLZS_R,ZLE,ZRE, WTXE, WTYE, FLZE_L, FLZE_R //YLS: Y LEFT START-POSITION, YLE: Y LEFT END-POSITION
+//INITIAL POSITIONS
+LENGTH ZL0, ZR0, WTX0, WTY0, FLZL0, FLZR0
+LENGTH2D XYL0, XYR0, XYLS, XYRS, XYLE, XYRE
+//DATA CONTAINER
+ARRAY [60000] FM_M14, FM_M7, FM_M2, FM_MF31
+SCALAR M14,M2,M7,MF31, FMcounter, FileWriteCounter, M14CVF, M2CVF, M7CVF, MF31CVF
+//SPEED
+SPEED FMX1L, FMX1R, FMX2L, FMX2R
+END
+//FUNC AXIS DEFINITION
+ACTOR XYLeft = AXSYSTEM (personality="MaximXYLeft",trafo="trafoA0G0XYLeft")
+ACTOR XYRight = AXSYSTEM (personality="MaximXYRight",trafo="trafoA0G0XYRight")
+
+ACTOR ZLeft = LINETEL (personality="axisZLeft", trafo="trafoZ0G0Left")
+ACTOR ZRight = LINETEL (personality="axisZRight", trafo="trafoZ0G0Right")
+
+ACTOR YLeft =  LINETEL (personality="axisYLeft")
+ACTOR YRight =  LINETEL (personality="axisYRight")
+
+ACTOR X1Left = LINETEL (personality="axisX1Left", speed = 10mm/s, accel = 35000mm/s2)
+ACTOR X2Left = LINETEL (personality="axisX2Left", speed = 10mm/s, accel = 35000mm/s2)
+ACTOR X1Right = LINETEL (personality="axisX1Right")
+ACTOR X2Right = LINETEL (personality="axisX2Right")
+
+ACTOR FLZLeft = LINETEL (personality = "axisFlipZLeft", speed = 1000mm/s, accel = 35000mm/s2, jerktime = 15ms)
+ACTOR FLZRight = LINETEL (personality = "axisFlipZRight", speed = 1000mm/s, accel = 35000mm/s2, jerktime = 15ms)
+
+ACTOR WTX =  LINETEL (personality = "axisWaferX")
+ACTOR WTY =  LINETEL (personality = "axisWaferY")
+//END
+//FUNC INITIALIZATION (INI)
+PROC ini
+	loop = 1
+	FMloop = 1
+	//record home position
+	XYLeft.getPos XYL0
+	XYRight.getPos XYR0
+	ZLeft.getPos ZL0
+	ZRight.getPos ZR0
+	FLZLeft.getPos FLZL0
+	FLZRight.getPos FLZR0
+	WTX.getPos WTX0
+	WTY.getPos WTY0
+	FMX1L = 10mm/s
+	FMX2R = 10mm/s
+	FMX2L = 10mm/s
+	FMX2R = 10mm/s
+	M2CVF = 409600000
+	M7CVF = 409600000
+	M14CVF = 67108.864
+	MF31CVF = 1310.72
+ENDPROC
+//END
+//FUNC HOME POSITION
+PROC home_pos
+	PAR
+	ZLeft.goPos ZL0 (feedrate = 10%)
+	ZRight.goPos ZR0 (feedrate = 10%)
+	ENDPAR
+
+	delay 1s
+
+	PAR
+	XYLeft.goPos XYL0 (feedrate = 10%)
+	XYRight.goPos XYR0 (feedrate = 10%)
+	ENDPAR
+
+	delay 1s
+
+	PAR
+	FLZLeft.goPos FLZL0 (feedrate = 10%)
+	FLZRight.goPos FLZR0 (feedrate = 10%)
+	ENDPAR
+
+	delay 1s
+	
+	PAR
+	WTX.goPos WTX0 (feedrate = 10%)
+	WTY.goPos WTY0 (feedrate = 10%)
+	ENDPAR
+ENDPROC
+//END
+//FUNC MCALL OPTIONS (MCALL_OPT)
+PROC mcall_opt
+	messagebox "Axis Option":"X1 Axis" "1. X1-LEFT   2. X1-RIGHT", "X2 Axis" "3. X2-LEFT   4.X2-RIGHT","Y Axis" "5. Y-LEFT   6.Y-RIGHT", "Z Axis" "7.Z-LEFT   8.Z-RIGHT","Flipper Z" "11. Flipper-LEFT   12.Flipper-RIGHT","Wafer Table" "15. Wafer X   16. Wafer Y", input "Axis Option" option
+	//ETEL gets the object based on the function & axis option
+	IF option == 1 THEN mcall "ETLgetObj", "axisX1Left", &value ENDIF //X1
+	IF option == 2 THEN mcall "ETLgetObj", "axisX1Right", &value ENDIF
+	IF option == 3 THEN mcall "ETLgetObj", "axisX2Left", &value ENDIF //X2
+	IF option == 4 THEN mcall "ETLgetObj", "axisX2Right", &value ENDIF
+	IF option == 5 THEN mcall "ETLgetObj", "axisYLeft", &value ENDIF //Y
+	IF option == 6 THEN mcall "ETLgetObj", "axisYRight", &value ENDIF
+	IF option == 7 THEN mcall "ETLgetObj", "axisZLeft", &value ENDIF //Z
+	IF option == 8 THEN mcall "ETLgetObj", "axisZRight", &value ENDIF
+	IF option == 9 THEN mcall "ETLgetObj", "axisThetaLeft", &value ENDIF //Theta
+	IF option == 10 THEN mcall "ETLgetObj", "axisThetaRight", &value ENDIF
+	IF option == 11 THEN mcall "ETLgetObj", "axisFlipZLeft", &value ENDIF //Flipper Z
+	IF option == 12 THEN mcall "ETLgetObj", "axisFlipZRight", &value ENDIF
+	IF option == 13 THEN mcall "ETLgetObj", "axisFlipThetaLeft", &value ENDIF //Flipper Theta
+	IF option == 14 THEN mcall "ETLgetObj", "axisFlipThetaRight", &value ENDIF
+	IF option == 15 THEN mcall "ETLgetObj", "axisWaferX", &value ENDIF //WT
+	IF option == 16 THEN mcall "ETLgetObj", "axisWaferY", &value ENDIF
+	IF option == 17 THEN mcall "ETLgetObj", "axisNeedle", &value ENDIF //Needle
+ENDPROC
+//END
+//FUNC FM GO TO START POSITION
+PROC start_pos
+	
+	IF option == 1 | option == 3 THEN XYLeft.goPos XYLS (feedrate = 5%) log XYLS ENDIF //X1 LEFT
+
+ENDPROC
+//END
+
+//FUNC FM MOVE AXIS AND RECORD DATA via ETLcmd
+PROC FM_move
+//X1 LEFT
+	IF option == 1 THEN 
+		IF TracingType == 2 THEN //ETLcmd TRACING
+			flag = 1
+			FMcounter = 1
+		PAR
+			SEQ
+				XYLeft.goPos XYLE (speed = FMX1L, accel = 4000mm/s2)
+				XYLeft.goPos XYLS  (speed = FMX1L, accel = 4000mm/s2)
+				flag = 0
+			ENDSEQ
+		
+			WHILE flag == 1 DO
+			X1Left.ETLcmd "M14":M14 (double)
+			X1Left.ETLcmd "M7":M7 (double)
+			X1Left.ETLcmd "M2":M2 (double)
+			X1Left.ETLcmd "MF31":MF31 (double)
+		
+			FM_M2.(FMcounter) = M2 * M2CVF *1000000000
+			FM_MF31.(FMcounter) = MF31	
+			FM_M14.(FMcounter) = M14
+			FM_M7.(FMcounter) = 0.000000001 * M7 / M7CVF
+			FMcounter = FMcounter + 1
+			log "=========", FMcounter
+			ENDWHILE
+		ENDPAR	
+		ENDIF
+		IF TracingType == 1 THEN //*.ini TRACING
+			SEQ
+				mcall "ETLdebugTraceStart", "/sd0/datacon/data/gantryleftX_frictionPositiveStroke.ini" 
+				delay 500 ms
+				XYLeft.goPos XYLE (speed = FMX1L, accel = 4000mm/s2)
+				mcall "ETLdebugTraceStopAll"
+				delay 500 ms
+				mcall "ETLdebugTraceStart", "/sd0/datacon/data/gantryleftX_frictionNegativeStroke.ini" 
+				delay 500 ms
+				XYLeft.goPos XYLS  (speed = FMX1L, accel = 4000mm/s2)
+			ENDSEQ
+		ENDIF
+	ENDIF 
+	
+//X2 LEFT
+	IF option == 3 THEN 
+		IF TracingType == 2 THEN //ETLcmd TRACING
+			flag = 1
+			FMcounter = 1
+		PAR
+			SEQ
+				XYLeft.goPos XYLE (speed = FMX1L, accel = 4000mm/s2)
+				XYLeft.goPos XYLS  (speed = FMX1L, accel = 4000mm/s2)
+				flag = 0
+			ENDSEQ
+		
+			WHILE flag == 1 DO
+			X2Left.ETLcmd "M14":M14 (double)
+			X2Left.ETLcmd "M7":M7 (double)
+			X2Left.ETLcmd "M2":M2 (double)
+			X2Left.ETLcmd "MF31":MF31 (double)
+		
+			FM_M2.(FMcounter) = M2 * M2CVF *1000000000
+			FM_MF31.(FMcounter) = MF31	
+			FM_M14.(FMcounter) = M14
+			FM_M7.(FMcounter) = 0.000000001 * M7 / M7CVF
+			FMcounter = FMcounter + 1
+			log "=========", FMcounter
+			ENDWHILE
+		ENDPAR	
+		ENDIF
+	
+		IF TracingType == 1 THEN //*.ini TRACING
+			SEQ
+				mcall "ETLdebugTraceStart", "/sd0/datacon/data/gantryleftX_frictionPositiveStroke.ini" 
+				delay 500 ms
+				XYLeft.goPos XYLE (speed = FMX1L, accel = 4000mm/s2)
+				mcall "ETLdebugTraceStopAll"
+				delay 500 ms
+				mcall "ETLdebugTraceStart", "/sd0/datacon/data/gantryleftX_frictionNegativeStroke.ini" 
+				delay 500 ms
+				XYLeft.goPos XYLS  (speed = FMX1L, accel = 4000mm/s2)
+			ENDSEQ
+			ENDIF
+	ENDIF 	
+	
+//
+	ENDPROC
+//END
+//FUNC FM GET START-POSITION
+PROC FM_getStartPos
+	IF option == 1 THEN XYLS.y = 150 mm XYLS.x = -95mm ENDIF //X1 LEFT
+	IF option == 3 THEN XYLS.y = 150 mm XYLS.x = -95mm ENDIF //X2 LEFT
+ENDPROC
+//END
+//FUNC FM GET END-POSITION
+PROC FM_getEndPos
+	IF option == 1 THEN XYLE.y = 150 mm XYLE.x = 300mm ENDIF //X1 LEFT
+	IF option == 3 THEN XYLE.y = 150 mm XYLE.x = 300mm ENDIF //X2 LEFT
+ENDPROC
+//END
+//FUNC FM WRITE TO FILE
+PROC FM_writefile
+  input "Click OK and machine will write traced data to /sd0/prot/Friction_Measurement.txt\n\nPlease rename the file after finish since it will be overwritten by next tracing"
+  mcall "icmWriteToFile", "/sd0/prot/Friction_Measurement.txt","Axis;     M14;     M7;     M2;     MF31\n"
+  FileWriteCounter = 1
+  WHILE FileWriteCounter <= 20000 DO
+    	mcall  "icmWriteToFile", "/sd0/prot/Friction_Measurement.txt",option,"     ",FM_M14.(FileWriteCounter),"(m/s2);    ",FM_M7.(FileWriteCounter),"(m);    ",FM_M2.(FileWriteCounter),"(m);    ",FM_MF31.(FileWriteCounter),"(A)\n"
+	FileWriteCounter = FileWriteCounter + 1
+	IF FileWriteCounter mod 500 == 0 THEN delay 200ms ENDIF
+  ENDWHILE
+ENDPROC
+//END
+//FUNC FM TRACING FILE
+PROC FM_ini_file
+	IF option == 1 THEN
+	mcall "ETLdebugTraceStart", "/sd0/datacon/data/FM_X1Left.ini" 
+	log "FM_X1Left.ini file loaded"
+	log "============================="
+	log "***                OMA Tracing Enabled               ***"
+	log "============================="
+	ENDIF
+ENDPROC
+//END
+//FUNC FM OCTAVE
+/*
+PROC FM_Octave
+	mcall 
+ENDPROC
+//END
+*/
+//FUNC FRICTION MEASUREMENT (FM)
+PROC FM
+//M14(theoretical position), M7(real position), M2(tracking error) and MF31(real force Iq measured) to be used
+//IND.axisID  //for homing, this home position is defined by controller, maybe different from software 0 position. axisID: the axis you want to measure. 
+//MVE. axisID =0.008 //move the axis to the absolute starting position
+//SPD. axisID =0.01 //set velocity to 0.01m/s, accel remains as homing ace.
+
+	call FM_getStartPos //load the start position data
+	call FM_getEndPos //load the end position data
+	input "All axis now will move to its initial position"
+	//call home_pos //machine will move to initial position
+	log "============================="
+	log "All axis are now at its initial position"
+	log "============================="
+	delay 1s
+	input "All axis now will move to its start position and start the test"
+	call start_pos //machine will move to start position
+	log "============================="
+	log "Axis are now in its start position"
+	log "============================="
+	
+// select traing method: *.ini file or ETLcmd
+	
+	input "Tracing Type Option":"How to trace the data: 1. Use tracing *.ini file; 2. Use ETEL Command":TracingType
+	mcall "system", "rm -rf /sd0/prot/Friction_Measurement.txt"
+	log "Existing file deleted, new file will be created"
+	call FM_move //move axis slowly and record data
+	call FM_writefile	//write data into txt file
+
+ENDPROC
+//END
+
+//FUNC MAIN
+PROC main
+call ini 
+WHILE loop == 1 DO
+	call mcall_opt //this will determine the function and axis for ETEL
+	//1. FRICTION MEASUREMENT, 2 MANUAL TRACING, 3. HUMMING NOISE, 4. ENCODER SIGNAL
+	//call checkfile // if file does not exist, quit, if exist, continue
+	call FM 
+	IF input "Repeat process for other axis?" THEN 
+		loop = 1 
+		//machine home
+		call home_pos
+	ELSE loop = 0
+		//machine home
+		call home_pos
+		log "============================="
+		log "***               Program Ends               ***"
+		log "============================="
+	ENDIF
+ENDWHILE
+ENDPROC
+//END
